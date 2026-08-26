@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTrip } from '../context/TripContext'
-import { useTripMembers } from '../lib/useTripMembers'
+import { MAX_NAME_LENGTH, useTripMembers } from '../lib/useTripMembers'
 import { useRates } from '../lib/useRates'
 import { useBudgets } from '../lib/useBudgets'
 import { won } from '../lib/format'
@@ -12,8 +12,8 @@ function todayDate(): string {
 }
 
 export function SettingsTab() {
-  const { trip, personName, switchTrip } = useTrip()
-  const { members } = useTripMembers(trip?.id)
+  const { trip, personName, member, switchTrip, renameMe } = useTrip()
+  const { members, refresh: refreshMembers, addMember, deactivateMember } = useTripMembers(trip?.id)
   const { rates, setManualRate, fetchNow } = useRates(trip?.id, trip?.code)
   const { budgets, total, addBudget, removeBudget } = useBudgets(trip?.id)
 
@@ -23,6 +23,10 @@ export function SettingsTab() {
   const [rateInputs, setRateInputs] = useState<Record<string, string>>({})
   const [rateBusy, setRateBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [newMemberName, setNewMemberName] = useState('')
+  const [editingName, setEditingName] = useState(false)
+  const [nameDraft, setNameDraft] = useState('')
+  const [memberError, setMemberError] = useState<string | null>(null)
 
   const sortedRateDates = Object.keys(rates).sort()
   const currencies = foreignCurrencies(trip)
@@ -42,6 +46,32 @@ export function SettingsTab() {
     }
   }
 
+  async function handleAddMember() {
+    setMemberError(null)
+    const result = await addMember(newMemberName)
+    if (result.ok) setNewMemberName('')
+    else setMemberError(result.error ?? '참여자 추가에 실패했어요.')
+  }
+
+  async function handleSaveMyName() {
+    setMemberError(null)
+    const result = await renameMe(nameDraft)
+    if (!result.ok) {
+      setMemberError(result.error ?? '이름 변경에 실패했어요.')
+      return
+    }
+    setEditingName(false)
+    // trip_members.person_id 가 바뀌었으므로 목록도 다시 읽는다.
+    await refreshMembers()
+  }
+
+  async function handleDeactivate(memberId: string, name: string) {
+    if (!confirm(`'${name}' 을(를) 참여자 목록에서 뺄까요?
+이미 입력된 지출 기록은 그대로 남아요.`)) return
+    setMemberError(null)
+    const result = await deactivateMember(memberId)
+    if (!result.ok) setMemberError(result.error ?? '삭제에 실패했어요.')
+  }
   async function handleRemoveBudget(id: string) {
     if (!confirm('이 예산 항목을 지울까요?')) return
     const result = await removeBudget(id)
@@ -174,11 +204,59 @@ export function SettingsTab() {
       </div>
 
       <div className="sec">참여자</div>
-      <div className="box">
-        {members.map((m) => (
-          <div className="tr" key={m.id}><span className="k">{m.personName}</span></div>
-        ))}
+      <div className="box" style={{ marginBottom: 10 }}>
+        {members.map((m) => {
+          const isMe = m.id === member?.id
+          if (isMe && editingName) {
+            return (
+              <div className="tr" key={m.id}>
+                <input
+                  className="inp"
+                  autoFocus
+                  maxLength={MAX_NAME_LENGTH}
+                  value={nameDraft}
+                  onChange={(e) => setNameDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleSaveMyName() }}
+                  style={{ flex: 1, marginRight: 6 }}
+                />
+                <button className="btn sm" style={{ width: 58 }} onClick={handleSaveMyName}>저장</button>
+                <button className="x" style={{ marginLeft: 6 }} onClick={() => setEditingName(false)}>취소</button>
+              </div>
+            )
+          }
+          return (
+            <div className="tr" key={m.id}>
+              <span className="k">
+                {m.personName}
+                {isMe && <span style={{ color: 'var(--jade)' }}> · 나</span>}
+              </span>
+              <span className="v txt">
+                {isMe ? (
+                  <button className="x" onClick={() => { setNameDraft(m.personName); setEditingName(true); setMemberError(null) }}>이름 수정</button>
+                ) : (
+                  <button className="x" style={{ color: 'var(--rose)' }} onClick={() => handleDeactivate(m.id, m.personName)}>빼기</button>
+                )}
+              </span>
+            </div>
+          )
+        })}
       </div>
+      <div className="row2">
+        <input
+          className="inp"
+          placeholder="참여자 이름 추가"
+          maxLength={MAX_NAME_LENGTH}
+          value={newMemberName}
+          onChange={(e) => setNewMemberName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleAddMember() }}
+        />
+        <button className="btn ghost" style={{ flex: '0 0 80px' }} onClick={handleAddMember}>추가</button>
+      </div>
+      {memberError && <p className="err">{memberError}</p>}
+      <p className="note" style={{ marginTop: 9 }}>
+        이름은 본인 것만 고칠 수 있어요. 미리 추가해두면 그 사람이 접속해서 같은 이름을
+        입력할 때 이 자리에 그대로 이어져요 — 이름이 다르면 따로 생기니 철자를 맞춰주세요.
+      </p>
 
       <div className="sec">홈 화면에 앱처럼 두기</div>
       <div className="box" style={{ padding: '14px 15px', marginBottom: 10 }}>

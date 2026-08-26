@@ -5,11 +5,13 @@ import { useRates } from '../lib/useRates'
 import { useEntries, type PendingEntry } from '../lib/useEntries'
 import { useBudgets } from '../lib/useBudgets'
 import { usePolling } from '../lib/usePolling'
-import { latestRateFor, resolveAmount } from '../lib/rates'
+import { latestRateFor, rateFor, resolveAmount } from '../lib/rates'
 import { computeTotals, entryCurrency } from '../lib/totals'
 import { CATEGORIES } from '../lib/categories'
 import { currencyChip, currencyLabel, currencySuffix } from '../lib/currencies'
 import { BASE_CURRENCY, summaryCurrency, tripCurrencies } from '../lib/tripCurrency'
+import { PAYMENT_METHODS, paymentLabel } from '../lib/payment'
+import { won } from '../lib/format'
 import { Pair } from '../components/Pair'
 
 interface Draft {
@@ -19,13 +21,17 @@ interface Draft {
   krw: string
   currency: string
   memberId: string | null
+  paidBy: string | null
+  paymentMethod: string
+  /** 비어 있으면 저장할 때 금액에서 다시 계산한다. */
+  rate: string
   date: string
 }
 
 export function HistoryTab() {
   const { trip } = useTrip()
-  const { members } = useTripMembers(trip?.id)
-  const { rates } = useRates(trip?.id, trip?.code)
+  const { members, allMembers } = useTripMembers(trip?.id)
+  const { rates, fetchNow } = useRates(trip?.id, trip?.code)
   const { entries, updateEntry, removeEntry, refresh } = useEntries(trip?.id)
   const { total: budgetTotal } = useBudgets(trip?.id)
   usePolling(refresh, !!trip?.id)
@@ -38,7 +44,7 @@ export function HistoryTab() {
 
   const currencies = tripCurrencies(trip)
   const summary = summaryCurrency(trip)
-  const totals = computeTotals(entries, members, budgetTotal, summary, latestRateFor(rates, summary))
+  const totals = computeTotals(entries, allMembers, budgetTotal, summary, latestRateFor(rates, summary))
   const categories = useMemo(() => CATEGORIES.map(([name]) => name).concat('기타'), [])
 
   const filtered = entries.filter((e) => {
@@ -66,6 +72,9 @@ export function HistoryTab() {
       krw: String(e.krw),
       currency: entryCurrency(e),
       memberId: e.member_id,
+      paidBy: e.paid_by,
+      paymentMethod: e.payment_method ?? 'cash',
+      rate: e.rate === null ? '' : String(e.rate),
       date: e.date,
     })
     setError(null)
@@ -86,14 +95,19 @@ export function HistoryTab() {
       setError('금액을 입력해주세요.')
       return
     }
+    // 환율 칸을 직접 채웠으면 그 값이 우선이다 (설정 탭 직접입력과 같은 원칙).
+    const typedRate = parseFloat(draft.rate)
+    const useTyped = draft.currency !== BASE_CURRENCY && typedRate > 0 && resolved.cny > 0
     const result = await updateEntry(editingId, {
       title: draft.title,
       member_id: draft.memberId,
+      paid_by: draft.paidBy,
+      payment_method: draft.paymentMethod,
       date: draft.date,
-      krw: resolved.krw,
+      krw: useTyped ? Math.round(resolved.cny * typedRate) : resolved.krw,
       cny: resolved.cny,
       currency: draft.currency,
-      rate: resolved.rate,
+      rate: useTyped ? typedRate : resolved.rate,
     })
     if (!result.ok) {
       setError(result.error ?? '저장에 실패했어요.')
@@ -103,6 +117,40 @@ export function HistoryTab() {
     setDraft(null)
   }
 
+  /**
+   * 이 건만 그 날짜 환율로 다시 계산한다.
+   *
+   * 기본은 '저장 당시 환율로 고정'이다 — 카드 청구는 결제 시점 환율로 확정되고,
+   * 외화·원화를 둘 다 입력한 건은 실제 청구 환율이 역산돼 있어서 시세로 덮으면
+   * 오히려 부정확해진다. 그래서 일괄 재계산은 두지 않고 건별로만, 확인을 받고 한다.
+   */
+  async function recalcRate() {
+    if (!editingId || !draft) return
+    if (draft.currency === BASE_CURRENCY) return
+
+    let rate = rateFor(rates, draft.date, draft.currency)
+    if (rate === null) {
+      const fetched = await fetchNow(draft.date)
+      if (fetched.ok && fetched.rates) rate = fetched.rates[draft.currency] ?? null
+    }
+    if (rate === null) {
+      setError(draft.date + ' 의 ' + draft.currency + ' 환율이 없어요. 설정 탭에서 조회하거나 직접 입력해주세요.')
+      return
+    }
+
+    const cny = parseFloat(draft.cny) || 0
+    if (!cny) {
+      setError('외화 금액이 있어야 다시 계산할 수 있어요.')
+      return
+    }
+    const nextKrw = Math.round(cny * rate)
+    const msg = `이 건을 ${draft.date} 환율 ${rate.toFixed(2)} 로 다시 계산할까요?
+원화 ${draft.krw} → ${nextKrw}`
+    if (!confirm(msg)) return
+
+    setDraft({ ...draft, krw: String(nextKrw), rate: String(rate) })
+    setError(null)
+  }
   async function deleteEntry() {
     if (!editingId) return
     if (!confirm('이 기록을 지울까요?')) return
@@ -192,10 +240,49 @@ export function HistoryTab() {
                     </label>
                   </div>
                   {draft.currency !== BASE_CURRENCY && (
-                    <p className="note" style={{ margin: '0 0 9px' }}>
-                      {impliedRate ? `적용환율 ${impliedRate.toFixed(2)} · 한쪽을 비우면 자동 환산돼요` : '한쪽만 채우면 저장할 때 환율로 자동 환산돼요'}
-                    </p>
+                    <>
+                      <div className="money">
+                        <label>
+                          <input
+                            inputMode="decimal"
+                            value={draft.rate}
+                            placeholder="환율"
+                            onChange={(ev) => setDraft({ ...draft, rate: ev.target.value })}
+                          />
+                          <span>원/{draft.currency}</span>
+                        </label>
+                        <button className="btn ghost sm" onClick={recalcRate}>이 날짜 환율로</button>
+                      </div>
+                      <p className="note" style={{ margin: '0 0 9px' }}>
+                        {impliedRate
+                          ? `적용환율 ${impliedRate.toFixed(2)} · 외화·원화를 둘 다 채우면 실제 청구 환율로 잡혀요`
+                          : '환율은 저장 당시 값으로 고정돼요. 고치려면 위 칸에 직접 적거나 버튼을 누르세요.'}
+                      </p>
+                    </>
                   )}
+                  <div className="chips" style={{ marginBottom: 8 }}>
+                    {PAYMENT_METHODS.map((m) => (
+                      <button
+                        key={m.code}
+                        className={'chip' + (draft.paymentMethod === m.code ? ' on' : '')}
+                        onClick={() => setDraft({ ...draft, paymentMethod: m.code })}
+                      >
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="chips" style={{ marginBottom: 8 }}>
+                    <span className="note" style={{ marginRight: 4 }}>결제자</span>
+                    {members.map((m) => (
+                      <button
+                        key={m.id}
+                        className={'chip' + (draft.paidBy === m.id ? ' on' : '')}
+                        onClick={() => setDraft({ ...draft, paidBy: draft.paidBy === m.id ? null : m.id })}
+                      >
+                        {m.personName}
+                      </button>
+                    ))}
+                  </div>
                   <div className="chips">
                     <button className={'chip' + (draft.memberId === null ? ' on' : '')} onClick={() => setDraft({ ...draft, memberId: null })}>공금</button>
                     {members.map((m) => (
@@ -216,7 +303,19 @@ export function HistoryTab() {
               )
             }
 
-            const memberName = e.member_id ? members.find((m) => m.id === e.member_id)?.personName ?? '개인' : '공금'
+            const memberName = e.member_id
+              ? allMembers.find((m) => m.id === e.member_id)?.personName ?? '개인'
+              : '공금'
+            // 결제자가 회계 귀속(member_id)과 다를 때만 따로 적는다. 같으면 중복이다.
+            const payerName =
+              e.paid_by && e.paid_by !== e.member_id
+                ? allMembers.find((m) => m.id === e.paid_by)?.personName ?? null
+                : null
+            // 원화 건은 환산이 없으므로 환율을 보여줄 게 없다.
+            const shownRate =
+              e.rate !== null && entryCurrency(e) !== BASE_CURRENCY
+                ? `1${entryCurrency(e)}=${won(e.rate)}`
+                : null
             return (
               <div className="item" key={e.id} onClick={() => openEdit(e)}>
                 <div className="body">
@@ -227,6 +326,9 @@ export function HistoryTab() {
                   <div className="meta">
                     {e.date.slice(5).replace('-', '/')} · {e.category} ·{' '}
                     <span style={{ color: e.member_id ? 'var(--marigold)' : 'var(--jade)' }}>{memberName}</span>
+                    {' · '}{paymentLabel(e.payment_method)}
+                    {payerName && <> · 결제 {payerName}</>}
+                    {shownRate && <> · {shownRate}</>}
                     {e.pending && <span style={{ color: 'var(--marigold)' }}> · 동기화 대기중</span>}
                   </div>
                 </div>

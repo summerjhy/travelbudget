@@ -13,7 +13,15 @@ import { computeTotals, entryCurrency } from '../lib/totals'
 import { foreign, won } from '../lib/format'
 import { currencyChip, currencyLabel, currencyName, currencySuffix } from '../lib/currencies'
 import { BASE_CURRENCY, defaultCurrency, summaryCurrency, tripCurrencies } from '../lib/tripCurrency'
-import { getStoredCurrency, setStoredCurrency } from '../lib/session'
+import {
+  getStoredCurrency,
+  getStoredPayer,
+  getStoredPayment,
+  setStoredCurrency,
+  setStoredPayer,
+  setStoredPayment,
+} from '../lib/session'
+import { DEFAULT_PAYMENT_METHOD, PAYMENT_METHODS, isPaymentMethod, paymentLabel } from '../lib/payment'
 import { resizeAndCompressMany } from '../lib/imageResize'
 import { parseImages } from '../lib/parseImage'
 import { consumeSharedFiles } from '../lib/shareTarget'
@@ -22,6 +30,7 @@ import type { Entry } from '../lib/types'
 
 interface PreviewItem extends ParsedEntry {
   memberId: string | null
+  paymentMethod: string
   entrySource: Entry['source']
 }
 
@@ -32,8 +41,8 @@ function todayDate(): string {
 }
 
 export function RecordTab() {
-  const { trip, personName } = useTrip()
-  const { members } = useTripMembers(trip?.id)
+  const { trip, personName, member } = useTrip()
+  const { members, allMembers } = useTripMembers(trip?.id)
   const { rates, fetchNow } = useRates(trip?.id, trip?.code)
   const { entries, addEntries, refresh } = useEntries(trip?.id)
   const { total: budgetTotal } = useBudgets(trip?.id)
@@ -47,6 +56,8 @@ export function RecordTab() {
   const [parsingImages, setParsingImages] = useState(false)
   const [lastSavedIds, setLastSavedIds] = useState<string[] | null>(null)
   const [currency, setCurrencyState] = useState<string | null>(null)
+  const [payment, setPaymentState] = useState<string | null>(null)
+  const [payer, setPayerState] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const memberNames = members.map((m) => m.personName)
@@ -54,15 +65,31 @@ export function RecordTab() {
   // 통화 선택 버튼은 고를 게 둘 이상일 때만 띄운다.
   const showCurrencyPicker = currencies.length >= 2
   const summary = summaryCurrency(trip)
-  const totals = computeTotals(entries, members, budgetTotal, summary, latestRateFor(rates, summary))
+  const totals = computeTotals(entries, allMembers, budgetTotal, summary, latestRateFor(rates, summary))
 
   // 입력 단위: 한 번 고르면 바꾸기 전까지 유지된다. 처음에는 여행하는 나라 돈.
   const activeCurrency =
     currency && currencies.includes(currency) ? currency : defaultCurrency(trip)
 
+  // 결제수단·결제자도 같은 방식. 결제자 기본값은 본인이고, 저장된 값이
+  // 지금 참여자 목록에 없으면(비활성화 등) 본인으로 되돌린다.
+  const activePayment = isPaymentMethod(payment) ? payment : DEFAULT_PAYMENT_METHOD
+  const activePayer =
+    payer && members.some((m) => m.id === payer) ? payer : member?.id ?? null
+
   function pickCurrency(next: string) {
     setCurrencyState(next)
     if (trip) setStoredCurrency(trip.code, next)
+  }
+
+  function pickPayment(next: string) {
+    setPaymentState(next)
+    if (trip) setStoredPayment(trip.code, next)
+  }
+
+  function pickPayer(next: string) {
+    setPayerState(next)
+    if (trip) setStoredPayer(trip.code, next)
   }
 
   // entries에서 최신 상태(pending 여부 포함)를 그때그때 조회한다 — id는 온라인 동기화 후에도 유지된다(로컬id는 즉시 반영, 서버id는 그대로).
@@ -75,6 +102,8 @@ export function RecordTab() {
   useEffect(() => {
     if (!tripCode) return
     setCurrencyState(getStoredCurrency(tripCode))
+    setPaymentState(getStoredPayment(tripCode))
+    setPayerState(getStoredPayer(tripCode))
   }, [tripCode])
 
   // 안드로이드 공유 시트로 이 앱을 열면(share_target) URL에 ?share-target=1이 붙는다.
@@ -104,6 +133,7 @@ export function RecordTab() {
       ...parsed.map((p) => ({
         ...p,
         memberId: members.find((m) => m.personName === p.personName)?.id ?? null,
+        paymentMethod: activePayment,
         date: p.date ?? todayDate(),
         entrySource: 'text' as const,
       })),
@@ -157,6 +187,7 @@ export function RecordTab() {
           category: guessCategory(r.merchant || ''),
           personName: null,
           memberId: null,
+          paymentMethod: activePayment,
           date: r.date ?? defaultDate,
           amount: isKRW ? (r.krw ?? 0) : (r.amount ?? 0),
           currency: itemCurrency,
@@ -227,6 +258,9 @@ export function RecordTab() {
         title: p.title,
         category: p.category,
         member_id: p.memberId,
+        payment_method: p.paymentMethod,
+        // 이름을 적어 개인 지출로 잡힌 건은 그 사람이 자기 돈으로 낸 것이다.
+        paid_by: p.memberId ?? activePayer,
         krw: resolved.krw,
         cny: resolved.cny,
         currency: p.currency,
@@ -295,6 +329,38 @@ export function RecordTab() {
         </div>
       )}
 
+      <div style={{ marginBottom: 8 }}>
+        <label className="lab">결제 수단</label>
+        <div className="chips">
+          {PAYMENT_METHODS.map((m) => (
+            <button
+              key={m.code}
+              className={'chip' + (activePayment === m.code ? ' on' : '')}
+              onClick={() => pickPayment(m.code)}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {members.length > 0 && (
+        <div style={{ marginBottom: 8 }}>
+          <label className="lab">결제자</label>
+          <div className="chips">
+            {members.map((m) => (
+              <button
+                key={m.id}
+                className={'chip' + (activePayer === m.id ? ' on' : '')}
+                onClick={() => pickPayer(m.id)}
+              >
+                {m.personName}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <textarea
         className="ta"
         value={text}
@@ -346,6 +412,17 @@ export function RecordTab() {
                   <button className="chip" style={{ marginLeft: 'auto' }} onClick={() => removePreviewItem(i)}>빼기</button>
                 </div>
                 <div className="chips" style={{ marginTop: 7 }}>
+                  {PAYMENT_METHODS.map((m) => (
+                    <button
+                      key={m.code}
+                      className={'chip' + (p.paymentMethod === m.code ? ' on' : '')}
+                      onClick={() => updatePreviewItem(i, { paymentMethod: m.code })}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="chips" style={{ marginTop: 7 }}>
                   <button
                     className={'chip' + (p.memberId === null ? ' on' : '')}
                     onClick={() => updatePreviewItem(i, { memberId: null, personName: null })}
@@ -380,6 +457,7 @@ export function RecordTab() {
             <div className="box" style={{ marginBottom: 8 }} key={e.id}>
               <div className="tr"><span className="k">이름</span><span className="v txt">{e.title}</span></div>
               <div className="tr"><span className="k">일자</span><span className="v">{e.date}</span></div>
+              <div className="tr"><span className="k">결제수단</span><span className="v txt">{paymentLabel(e.payment_method)}</span></div>
               <div className="tr"><span className="k">원화</span><span className="v">{won(e.krw)}</span></div>
               {entryCurrency(e) !== BASE_CURRENCY && (
                 <div className="tr">

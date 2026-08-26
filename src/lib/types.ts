@@ -47,7 +47,12 @@ export interface Entry {
   cny: number
   /** cny 의 통화 코드. 예전 행은 null 로 올 수 있고 그때는 CNY 다. */
   currency: string | null
+  /** 1 currency 당 원화. 저장 당시 값으로 고정된다 (설정에서 환율을 고쳐도 안 바뀐다). */
   rate: number | null
+  /** cash / credit / travel. 마이그레이션 0004 이전 행은 cash 로 채워졌다. */
+  payment_method: string
+  /** 실제로 돈을 낸 사람 (trip_members.id). member_id(공금/개인 구분)와 다르다. */
+  paid_by: string | null
   source: 'text' | 'image' | 'manual'
   created_by: string | null
   created_at: string
