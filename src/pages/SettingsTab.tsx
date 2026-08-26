@@ -131,6 +131,39 @@ export function SettingsTab() {
         ))}
       </div>
 
+      <div className="sec">홈 화면에 앱처럼 두기</div>
+      <div className="box" style={{ padding: '14px 15px', marginBottom: 10 }}>
+        <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 10 }}>아이폰 (Safari)</div>
+        <ol className="steps">
+          <li>카톡에서 링크를 연 뒤 오른쪽 아래 <b>⋯ → Safari로 열기</b></li>
+          <li>아래 가운데 <b>공유 버튼(↑)</b> 탭</li>
+          <li><b>홈 화면에 추가</b> 선택</li>
+          <li>이름 바꾸고 <b>추가</b></li>
+        </ol>
+      </div>
+      <div className="box" style={{ padding: '14px 15px' }}>
+        <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 10 }}>갤럭시 (Chrome)</div>
+        <ol className="steps">
+          <li>카톡에서 링크를 연 뒤 <b>다른 브라우저로 열기 → Chrome</b></li>
+          <li>오른쪽 위 <b>⋮</b> 탭</li>
+          <li><b>홈 화면에 추가</b> 선택</li>
+          <li><b>설치</b> 또는 <b>추가</b> 누르기</li>
+        </ol>
+      </div>
+      <p className="note" style={{ marginTop: 9 }}>
+        홈 화면에 설치하면 앱처럼 아이콘으로 바로 열 수 있어요.
+      </p>
+
+      <div className="sec">캡쳐로 바로 기록하기</div>
+      <div className="box" style={{ padding: '14px 15px' }}>
+        <p className="note" style={{ margin: 0 }}>
+          <b>갤럭시(안드로이드)</b>: 카드 결제 캡쳐를 찍고 공유 버튼을 누르면 공유 대상 목록에 이 앱이 떠요. 앱을 고르면 캡쳐 → 공유만으로 자동 분석까지 끝나요.
+        </p>
+        <p className="note" style={{ margin: '9px 0 0' }}>
+          <b>아이폰(iOS)</b>: iOS는 앱 간 공유 시트에 홈 화면 앱을 등록하는 기능을 지원하지 않아요. 기록 탭의 <b>사진으로 읽어들이기</b> 버튼으로 캡쳐를 직접 선택해주세요.
+        </p>
+      </div>
+
       <div className="sec">다른 여행</div>
       <button className="btn quiet" onClick={switchTrip}>다른 여행 코드로 전환</button>
       <p className="note" style={{ marginTop: 9 }}>

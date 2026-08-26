@@ -7,6 +7,9 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
@@ -25,30 +28,17 @@ export default defineConfig({
         ],
         share_target: {
           action: '/share-target',
-          method: 'GET',
-          enctype: 'application/x-www-form-urlencoded',
+          method: 'POST',
+          enctype: 'multipart/form-data',
           params: {
-            title: 'title',
-            text: 'text',
+            files: [
+              { name: 'images', accept: ['image/jpeg', 'image/png', 'image/webp'] },
+            ],
           },
         } as never,
       },
-      workbox: {
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-        runtimeCaching: [
-          {
-            urlPattern: ({ url }) => url.pathname.startsWith('/rest/v1/') || url.pathname.startsWith('/functions/v1/'),
-            handler: 'NetworkOnly',
-          },
-          {
-            urlPattern: ({ url }) => url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com'),
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts',
-              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 },
-            },
-          },
-        ],
       },
       devOptions: {
         enabled: false,

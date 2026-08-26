@@ -93,7 +93,7 @@ SPEC 5장의 5단계 우선순위 중 4번(외부 API 자동 조회)은 6단계(
 - [x] 6. fx-rates (fetch-rate Edge Function: frankfurter.app→open.er-api.com 폴백→최근값 폴백. 설정 탭 환율 목록/직접입력/지금조회, 예산 추가/삭제 UI. RecordTab 저장 시 캐시에 없는 날짜 자동 조회. Playwright + curl로 캐시/외부조회/CORS/직접입력 우선순위까지 전부 검증 완료)
 - [x] 7. image-parsing (parse-image Edge Function: gemini-flash-latest 별칭, 여러 장 병렬 처리(Promise.allSettled), 503 1회 재시도, 429/기타 실패는 그 장만 null. 클라이언트 리사이즈(1600px/JPEG 0.8) + RecordTab 사진 업로드 UI. 실제 카드사 캡쳐로 정확도 검증 완료)
 - [x] 8. pwa-offline (vite-plugin-pwa manifest+SW, 테마에 맞는 아이콘 신규 제작, IndexedDB 오프라인 큐(idb)로 entries insert/update/delete 큐잉, online 이벤트 시 자동 flush, 12초 폴링으로 Realtime 대체(6-2 참고). Playwright로 오프라인 저장→온라인 자동 동기화→중복 없음까지 검증 완료)
-- [ ] 9. share-target
+- [x] 9. share-target (Android Web Share Target Level 2 — POST/multipart/form-data/params.files로 manifest 구성, injectManifest 모드로 전환해 커스텀 SW(src/sw.ts)가 /share-target POST를 가로채 IndexedDB에 저장 후 리다이렉트, 클라이언트는 ?share-target=1을 감지해 자동으로 사진 분석 트리거. 설정 탭에 iOS/Android 홈 화면 설치 + 캡쳐 공유 방식 차이 안내 추가. Playwright로 SW 라우트 응답/IndexedDB 저장/자동 분석 트리거까지 검증 완료. 단, 실제 안드로이드 OS 공유 시트 자체는 브라우저 자동화로 재현 불가하므로 실기기 테스트 필요)
 - [ ] 10. deploy
 
 ### 3단계에서 확정된 구현 세부사항
@@ -134,6 +134,12 @@ SPEC 5장의 5단계 우선순위 중 4번(외부 API 자동 조회)은 6단계(
 - **오프라인 시 환율 처리**: 캐시에 없는 새 날짜를 오프라인에서 입력하면 `fetch-rate` 호출이 실패하므로, `latestRate(ratesByDate)`(가장 최근 캐시값)를 임시로 적용해 저장은 막지 않는다. 온라인 복귀 후 정확한 환율이 필요하면 내역 탭에서 재조정 가능.
 - **로컬id → 서버id 문제**: 오프라인 큐 항목은 `crypto.randomUUID()`로 임시 로컬id를 부여하는데, 온라인 동기화 후 서버가 새 id를 발급하므로 둘이 일치하지 않는다. "이번 사용금액" 카드는 저장 시점의 id 목록만 들고 있다가 `entries`에서 그때그때 찾아 렌더링하는 방식으로 단순화했다 — 동기화되면 로컬id를 못 찾아 카드가 조용히 사라진다(의도된 동작, 별도 매핑 테이블 없음).
 - **폴링/오프라인 동기화 후 pending 중복 집계 버그**: `useEntries.refresh()`가 기본적으로 로컬 pending 항목을 유지하는데, 오프라인 큐를 전부 flush한 직후에도 이 로직을 그대로 쓰면 서버 데이터(방금 반영됨)와 로컬 pending이 이중 집계된다. `refresh({ clearPending: true })` 옵션을 추가해 `useOfflineSync`가 큐를 전부 비웠을 때만 pending을 버리도록 구분했다.
+
+### 9단계에서 확정된 구현 세부사항
+- **generateSW → injectManifest 전환**: 8단계까지는 `vite-plugin-pwa`의 기본 `generateSW` 모드(워크박스 설정을 선언만 하면 SW를 자동 생성)를 썼지만, share target은 `/share-target` POST 요청을 직접 가로채 IndexedDB에 쓰는 커스텀 fetch 핸들러가 필요해 `strategies: 'injectManifest'` + `src/sw.ts`(직접 작성한 서비스워커)로 전환했다. 8단계에서 `workbox.runtimeCaching`으로 선언했던 REST/폰트 캐싱 정책은 `injectManifest`에서는 자동 생성되지 않으므로 `src/sw.ts`에 `registerRoute`로 직접 옮겨 적었다.
+- **manifest `share_target`은 파일 공유 형식이어야 한다**: 처음에는 `method: 'GET'` + `params.{title,text}`(텍스트 공유용)로 잘못 선언했었다. SPEC이 요구하는 건 스크린샷(이미지) 공유이므로 `method: 'POST'`, `enctype: 'multipart/form-data'`, `params.files: [{name, accept}]`가 필요하다(Web Share Target API Level 2).
+- **로컬id와 마찬가지로 파일 전달도 IndexedDB를 거친다**: 서비스워커의 fetch 핸들러는 응답으로 값을 반환할 뿐 클라이언트 JS 컨텍스트와 직접 통신할 수 없으므로, 받은 File들을 `travelbudget-share`라는 별도 IndexedDB(오프라인 큐와는 다른 DB)에 `pending` 키로 저장하고 `/?share-target=1`로 303 리다이렉트한다. React 앱은 마운트 시 이 쿼리 파라미터를 보고 `consumeSharedFiles()`로 꺼낸 뒤 즉시 `history.replaceState`로 URL을 정리하고 `RecordTab`의 사진 분석 파이프라인(`processPhotos`)에 그대로 흘려보낸다.
+- **테스트 한계**: 실제 안드로이드 공유 시트(다른 앱에서 "공유" 버튼 → 앱 목록에 이 PWA가 뜨는 것)는 OS 레벨 통합이라 헤드리스 브라우저 자동화로 재현할 수 없다. 대신 `<form method=POST enctype=multipart/form-data>` 제출로 실제 공유가 발생시키는 것과 동일한 요청을 만들어 SW 라우트→IndexedDB 저장→클라이언트 자동 트리거까지의 배관을 검증했다. 실기기(설치된 PWA에서 실제 공유 시트 사용)로 최종 확인이 필요하다.
 
 ## 작업 순서 (커밋 단위)
 

@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { useTrip } from '../context/TripContext'
 import { useTripMembers } from '../lib/useTripMembers'
 import { useRates } from '../lib/useRates'
@@ -13,6 +13,7 @@ import { computeTotals } from '../lib/totals'
 import { won, yuan } from '../lib/format'
 import { resizeAndCompressMany } from '../lib/imageResize'
 import { parseImages } from '../lib/parseImage'
+import { consumeSharedFiles } from '../lib/shareTarget'
 import { Pair } from '../components/Pair'
 import type { Entry } from '../lib/types'
 
@@ -56,6 +57,19 @@ export function RecordTab() {
     ? lastSavedIds.map((id) => entries.find((e) => e.id === id)).filter((e): e is PendingEntry => !!e)
     : []
 
+  // 안드로이드 공유 시트로 이 앱을 열면(share_target) URL에 ?share-target=1이 붙는다.
+  // 서비스워커가 IndexedDB에 저장해둔 공유 이미지를 꺼내 자동으로 분석한다.
+  useEffect(() => {
+    if (!trip) return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('share-target') !== '1') return
+    window.history.replaceState({}, '', window.location.pathname)
+    consumeSharedFiles().then((files) => {
+      if (files.length > 0) processPhotos(files)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trip?.id])
+
   function handleParse() {
     setError(null)
     const year = trip?.start_date.slice(0, 4) ?? String(new Date().getFullYear())
@@ -85,6 +99,10 @@ export function RecordTab() {
   async function handlePhotoSelect(e: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []).slice(0, MAX_PHOTOS)
     e.target.value = ''
+    await processPhotos(files)
+  }
+
+  async function processPhotos(files: File[]) {
     if (!files.length || !trip) return
 
     setParsingImages(true)
