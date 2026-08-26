@@ -1,7 +1,11 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { createTrip } from '../lib/createTrip'
+import { CURRENCY_GROUPS, currencyLabel } from '../lib/currencies'
+import { CONTINENTS, destinationLabel } from '../lib/destinations'
 
-const CURRENCY_OPTIONS = ['CNY', 'JPY', 'USD', 'EUR', 'THB', 'VND']
+/** 도시 셀렉트의 특수 항목 값. 실제 도시 이름과 겹치지 않도록 언더스코어를 쓴다. */
+const CITY_NONE = '__none__'
+const CITY_CUSTOM = '__custom__'
 
 export function CreateTripForm({ onBack, onCreated }: { onBack: () => void; onCreated: (code: string) => void }) {
   const [adminPassword, setAdminPassword] = useState('')
@@ -9,25 +13,62 @@ export function CreateTripForm({ onBack, onCreated }: { onBack: () => void; onCr
   const [name, setName] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
-  const [destinationInput, setDestinationInput] = useState('')
+  const [continent, setContinent] = useState('')
+  const [country, setCountry] = useState('')
+  const [city, setCity] = useState('')
+  const [customCity, setCustomCity] = useState('')
   const [destinations, setDestinations] = useState<string[]>([])
-  const [currencies, setCurrencies] = useState<string[]>(['CNY'])
+  const [currencies, setCurrencies] = useState<string[]>(['KRW'])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const countries = useMemo(
+    () => CONTINENTS.find((c) => c.name === continent)?.countries ?? [],
+    [continent],
+  )
+  const cities = useMemo(
+    () => countries.find((c) => c.name === country)?.cities ?? [],
+    [countries, country],
+  )
+
+  function pickContinent(v: string) {
+    setContinent(v)
+    setCountry('')
+    setCity('')
+    setCustomCity('')
+  }
+
+  function pickCountry(v: string) {
+    setCountry(v)
+    setCity('')
+    setCustomCity('')
+    // 나라를 고르면 그 나라 통화를 사용 통화에 바로 넣어준다 (KRW 는 처음부터 선택돼 있다).
+    const picked = countries.find((c) => c.name === v)
+    if (picked) addCurrency(picked.currency)
+  }
+
   function addDestination() {
-    const v = destinationInput.trim()
-    if (!v || destinations.includes(v)) return
-    setDestinations((prev) => [...prev, v])
-    setDestinationInput('')
+    if (!country) return
+    if (city === CITY_CUSTOM && !customCity.trim()) return
+    const picked = city === CITY_CUSTOM ? customCity : city === CITY_NONE ? '' : city
+    const label = destinationLabel(country, picked)
+    if (destinations.includes(label)) return
+    setDestinations((prev) => [...prev, label])
+    setCity('')
+    setCustomCity('')
   }
 
   function removeDestination(d: string) {
     setDestinations((prev) => prev.filter((x) => x !== d))
   }
 
-  function toggleCurrency(c: string) {
-    setCurrencies((prev) => (prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]))
+  function addCurrency(c: string) {
+    if (!c || currencies.includes(c)) return
+    setCurrencies((prev) => [...prev, c])
+  }
+
+  function removeCurrency(c: string) {
+    setCurrencies((prev) => prev.filter((x) => x !== c))
   }
 
   async function handleSubmit() {
@@ -57,7 +98,7 @@ export function CreateTripForm({ onBack, onCreated }: { onBack: () => void; onCr
       startDate,
       endDate: endDate || undefined,
       destinations,
-      spendCurrencies: currencies.length ? currencies : ['CNY'],
+      spendCurrencies: currencies.length ? currencies : ['KRW'],
     })
     setSubmitting(false)
 
@@ -124,20 +165,63 @@ export function CreateTripForm({ onBack, onCreated }: { onBack: () => void; onCr
         <div className="field">
           <label className="lab">여행 목적지 (복수 가능)</label>
           <div className="row2" style={{ marginBottom: 8 }}>
+            <select
+              className="inp sel"
+              aria-label="대륙"
+              value={continent}
+              onChange={(e) => pickContinent(e.target.value)}
+            >
+              <option value="">대륙 선택</option>
+              {CONTINENTS.map((c) => (
+                <option key={c.name} value={c.name}>{c.name}</option>
+              ))}
+            </select>
+            <select
+              className="inp sel"
+              aria-label="나라"
+              value={country}
+              disabled={!continent}
+              onChange={(e) => pickCountry(e.target.value)}
+            >
+              <option value="">나라 선택</option>
+              {countries.map((c) => (
+                <option key={c.name} value={c.name}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="row2" style={{ marginBottom: 8 }}>
+            <select
+              className="inp sel"
+              aria-label="도시"
+              value={city}
+              disabled={!country}
+              onChange={(e) => setCity(e.target.value)}
+            >
+              <option value="">도시 선택</option>
+              {cities.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+              <option value={CITY_NONE}>도시 미정 (나라만)</option>
+              <option value={CITY_CUSTOM}>직접 입력…</option>
+            </select>
+            <button className="btn ghost" style={{ flex: '0 0 80px' }} onClick={addDestination}>추가</button>
+          </div>
+          {city === CITY_CUSTOM && (
             <input
               className="inp"
-              value={destinationInput}
-              onChange={(e) => setDestinationInput(e.target.value)}
+              style={{ marginBottom: 8 }}
+              value={customCity}
+              onChange={(e) => setCustomCity(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault()
                   addDestination()
                 }
               }}
-              placeholder="예: 중국 상하이"
+              placeholder="도시 이름을 직접 입력"
+              autoFocus
             />
-            <button className="btn ghost" style={{ flex: '0 0 80px' }} onClick={addDestination}>추가</button>
-          </div>
+          )}
           {destinations.length > 0 && (
             <div className="chips">
               {destinations.map((d) => (
@@ -149,17 +233,34 @@ export function CreateTripForm({ onBack, onCreated }: { onBack: () => void; onCr
 
         <div className="field">
           <label className="lab">사용 통화 (복수 가능)</label>
-          <div className="chips">
-            {CURRENCY_OPTIONS.map((c) => (
-              <button
-                key={c}
-                className={'chip' + (currencies.includes(c) ? ' on' : '')}
-                onClick={() => toggleCurrency(c)}
-              >
-                {c}
-              </button>
+          <p className="note" style={{ margin: '0 0 8px' }}>
+            목적지 나라를 고르면 그 나라 통화가 자동으로 들어와요. 칩을 누르면 뺄 수 있어요.
+          </p>
+          <select
+            className="inp sel"
+            aria-label="통화 추가"
+            style={{ marginBottom: 8 }}
+            value=""
+            onChange={(e) => addCurrency(e.target.value)}
+          >
+            <option value="">통화 추가…</option>
+            {CURRENCY_GROUPS.map((g) => (
+              <optgroup key={g.region} label={g.region}>
+                {g.items
+                  .filter((c) => !currencies.includes(c.code))
+                  .map((c) => (
+                    <option key={c.code} value={c.code}>{`${c.code} (${c.country} ${c.unit})`}</option>
+                  ))}
+              </optgroup>
             ))}
-          </div>
+          </select>
+          {currencies.length > 0 && (
+            <div className="chips">
+              {currencies.map((c) => (
+                <button key={c} className="chip on" onClick={() => removeCurrency(c)}>{currencyLabel(c)} ✕</button>
+              ))}
+            </div>
+          )}
         </div>
 
         <button className="btn" onClick={handleSubmit} disabled={submitting} style={{ marginTop: 9 }}>

@@ -43,7 +43,10 @@ export interface Entry {
   category: string
   member_id: string | null
   krw: number
+  /** 외화 금액. 어느 통화인지는 currency 를 봐야 한다 (마이그레이션 0003 주석 참고). */
   cny: number
+  /** cny 의 통화 코드. 예전 행은 null 로 올 수 있고 그때는 CNY 다. */
+  currency: string | null
   rate: number | null
   source: 'text' | 'image' | 'manual'
   created_by: string | null
