@@ -42,6 +42,9 @@ export function CreateTripForm({ onBack, onCreated }: { onBack: () => void; onCr
     setCountry(v)
     setCity('')
     setCustomCity('')
+    // 나라를 고르면 그 나라 통화를 사용 통화에 바로 넣어준다 (KRW 는 처음부터 선택돼 있다).
+    const picked = countries.find((c) => c.name === v)
+    if (picked) addCurrency(picked.currency)
   }
 
   function addDestination() {
@@ -230,6 +233,9 @@ export function CreateTripForm({ onBack, onCreated }: { onBack: () => void; onCr
 
         <div className="field">
           <label className="lab">사용 통화 (복수 가능)</label>
+          <p className="note" style={{ margin: '0 0 8px' }}>
+            목적지 나라를 고르면 그 나라 통화가 자동으로 들어와요. 칩을 누르면 뺄 수 있어요.
+          </p>
           <select
             className="inp sel"
             aria-label="통화 추가"

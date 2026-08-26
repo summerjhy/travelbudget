@@ -9,14 +9,17 @@ export interface CurrencyOption {
 
 export interface CurrencyGroup {
   region: string
-  items: CurrencyOption[]
+  items: readonly CurrencyOption[]
 }
 
 /**
  * 선택 가능한 통화 목록. 여행지에서 쓸 법한 통화를 대륙별로 묶어둔다.
  * 표시 형식은 `KRW (한국 원)` — currencyLabel() 참고.
+ *
+ * `as const` 는 CurrencyCode 유니온을 뽑아내기 위한 것이다. destinations.ts 의
+ * 나라별 통화가 이 목록에 없는 코드를 쓰면 컴파일 단계에서 걸린다.
  */
-export const CURRENCY_GROUPS: CurrencyGroup[] = [
+export const CURRENCY_GROUPS = [
   {
     region: '동아시아 · 동남아시아',
     items: [
@@ -121,15 +124,20 @@ export const CURRENCY_GROUPS: CurrencyGroup[] = [
       { code: 'TZS', country: '탄자니아', unit: '실링' },
       { code: 'ETB', country: '에티오피아', unit: '비르' },
       { code: 'NGN', country: '나이지리아', unit: '나이라' },
+      { code: 'NAD', country: '나미비아', unit: '달러' },
       { code: 'MUR', country: '모리셔스', unit: '루피' },
       { code: 'SCR', country: '세이셸', unit: '루피' },
     ],
   },
-]
+] as const satisfies readonly CurrencyGroup[]
 
-const BY_CODE = new Map<string, CurrencyOption>(
-  CURRENCY_GROUPS.flatMap((g) => g.items).map((c) => [c.code, c]),
-)
+/** CURRENCY_GROUPS 에 실제로 들어있는 통화 코드만 허용하는 유니온 타입. */
+export type CurrencyCode = (typeof CURRENCY_GROUPS)[number]['items'][number]['code']
+
+const BY_CODE = new Map<string, CurrencyOption>()
+for (const group of CURRENCY_GROUPS as readonly CurrencyGroup[]) {
+  for (const item of group.items) BY_CODE.set(item.code, item)
+}
 
 /** `KRW` → `KRW (한국 원)`. 목록에 없는 코드는 코드 그대로 돌려준다. */
 export function currencyLabel(code: string): string {
