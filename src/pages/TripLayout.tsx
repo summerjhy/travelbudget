@@ -15,7 +15,7 @@ function latestRate(ratesByDate: Record<string, number>): number {
 export function TripLayout() {
   const { trip } = useTrip()
   const { members } = useTripMembers(trip?.id)
-  const { ratesByDate } = useRates(trip?.id)
+  const { ratesByDate } = useRates(trip?.id, trip?.code)
   const { entries } = useEntries(trip?.id)
   const { total: budgetTotal } = useBudgets(trip?.id)
 

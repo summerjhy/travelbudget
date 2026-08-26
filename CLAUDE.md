@@ -85,7 +85,7 @@ SPEC 5장의 5단계 우선순위 중 4번(외부 API 자동 조회)은 6단계(
 - [x] 3. trip-entry (코드 입력 → 이름 입력 → localStorage 캐시 → 재방문 자동 진입 → 설정 탭 "다른 여행 코드로 전환" 모두 Playwright로 검증 완료)
 - [x] 4. mvp-record (텍스트 파싱 → 편집 가능 미리보기 → 저장 → 이번 사용금액/공금외 누적/잔여예산 표시. **MVP 최소 사용 가능 지점 도달**. Playwright로 전체 흐름 검증 완료)
 - [x] 5. history-tab (합계 박스, 카테고리/사람 필터, 날짜별 그룹핑, 인라인 편집·삭제. Playwright로 편집/삭제 후 합계 재계산까지 검증 완료)
-- [ ] 6. fx-rates
+- [x] 6. fx-rates (fetch-rate Edge Function: frankfurter.app→open.er-api.com 폴백→최근값 폴백. 설정 탭 환율 목록/직접입력/지금조회, 예산 추가/삭제 UI. RecordTab 저장 시 캐시에 없는 날짜 자동 조회. Playwright + curl로 캐시/외부조회/CORS/직접입력 우선순위까지 전부 검증 완료)
 - [ ] 6. fx-rates
 - [ ] 7. image-parsing
 - [ ] 8. pwa-offline
@@ -107,6 +107,13 @@ SPEC 5장의 5단계 우선순위 중 4번(외부 API 자동 조회)은 6단계(
 ### 5단계에서 확정된 구현 세부사항
 - `HistoryTab`의 카테고리/사람 필터는 SPEC 7장 요구사항이지만 preview.html 프로토타입엔 없던 기능이라 새로 설계해 추가했다. 사람 필터의 `null`은 "공금"을, `'ALL'`은 필터 없음을 의미하는 3상태(`string | null | 'ALL'`).
 - 인라인 편집은 preview.html의 `editCard()`를 그대로 이식(제목/위안/원화/결제자 칩/날짜/삭제/취소/저장). 저장 시 `resolveAmount`로 재계산하므로 위안·원화 중 하나만 바꿔도 다른 쪽이 환율로 자동 갱신된다.
+
+### 6단계에서 확정된 구현 세부사항
+- `supabase/functions/fetch-rate`: `rates` 캐시 → frankfurter.app(해당 날짜) → open.er-api.com(최신값만) → 가장 최근 저장값 순으로 폴백. 클라이언트는 `x-trip-code` 헤더로 자기 여행인지 검증받는다(anon key로 직접 호출, service_role은 함수 내부에서만 사용).
+- **CORS 이슈와 해결**: Edge Function 최초 배포판에 CORS 헤더가 없어 브라우저에서 preflight(OPTIONS)가 막혀 `fetchNow` 호출이 전부 조용히 실패했다(try/catch가 삼켜서 에러 UI 없이 그냥 환산 안 된 채 넘어감). `supabase/functions/_shared/cors.ts`에 공통 헤더를 두고 모든 Edge Function이 OPTIONS를 처리하고 응답에 `Access-Control-Allow-*`를 붙이도록 고쳤다. **새 Edge Function을 추가할 때마다 이 패턴을 빠뜨리지 말 것.**
+- `.env`의 `VITE_SUPABASE_URL`은 끝에 슬래시를 붙이면 안 된다(`.../v1/fetch-rate` 대신 `...//v1/fetch-rate`가 되어버림). `src/lib/fetchRate.ts`에서 방어적으로 trailing slash를 제거하지만, `.env` 자체도 슬래시 없이 저장해야 한다.
+- `RecordTab.handleSave`는 저장 전에 필요한 날짜 중 `ratesByDate`에 없는 것만 골라 `fetchNow`로 순차 자동 조회한 뒤 계산한다. 4단계 시점의 "환율 없으면 저장 차단" 제약(6-1)은 이 단계에서 해제됨.
+- 설정 탭에 예산 추가/삭제 UI(`useBudgets`)와 환율 목록/직접입력/지금조회 UI를 함께 완성했다. 직접 입력이 외부 조회값을 덮어쓸 수 있다(SPEC 5장 우선순위 3번, "직접 적으면 그 값이 우선").
 
 ## 작업 순서 (커밋 단위)
 

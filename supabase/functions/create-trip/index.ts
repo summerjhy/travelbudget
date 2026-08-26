@@ -1,5 +1,11 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-trip-code',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
 interface CreateTripBody {
   adminPassword: string
   code: string
@@ -14,11 +20,15 @@ interface CreateTripBody {
 function jsonResponse(body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...corsHeaders },
   })
 }
 
 Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders })
+  }
+
   if (req.method !== 'POST') {
     return jsonResponse({ error: 'POST만 지원합니다.' }, 405)
   }

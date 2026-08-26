@@ -26,7 +26,7 @@ interface Draft {
 export function HistoryTab() {
   const { trip } = useTrip()
   const { members } = useTripMembers(trip?.id)
-  const { ratesByDate } = useRates(trip?.id)
+  const { ratesByDate } = useRates(trip?.id, trip?.code)
   const { entries, updateEntry, removeEntry } = useEntries(trip?.id)
   const { total: budgetTotal } = useBudgets(trip?.id)
 

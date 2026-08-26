@@ -27,7 +27,7 @@ function latestRate(ratesByDate: Record<string, number>): number {
 export function RecordTab() {
   const { trip, personName } = useTrip()
   const { members } = useTripMembers(trip?.id)
-  const { ratesByDate } = useRates(trip?.id)
+  const { ratesByDate, fetchNow } = useRates(trip?.id, trip?.code)
   const { entries, addEntries } = useEntries(trip?.id)
   const { total: budgetTotal } = useBudgets(trip?.id)
 
@@ -77,6 +77,17 @@ export function RecordTab() {
     setSaving(true)
     setError(null)
 
+    // 저장에 필요한 날짜 중 캐시에 없는 것은 미리 자동 조회한다.
+    const neededDates = Array.from(
+      new Set(preview.filter((p) => p.amount > 0).map((p) => p.date ?? todayDate())),
+    )
+    const rates = { ...ratesByDate }
+    for (const date of neededDates) {
+      if (rates[date] !== undefined) continue
+      const result = await fetchNow(date)
+      if (result.ok && result.rate !== undefined) rates[date] = result.rate
+    }
+
     const items: NewEntryInput[] = []
     for (const p of preview) {
       if (!(p.amount > 0)) continue
@@ -84,7 +95,7 @@ export function RecordTab() {
       const resolved = resolveAmount(
         { krw: p.currency === 'KRW' ? p.amount : undefined, cny: p.currency === 'CNY' ? p.amount : undefined },
         date,
-        ratesByDate,
+        rates,
       )
       if (!resolved.krw && !resolved.cny) continue
       items.push({
@@ -102,7 +113,7 @@ export function RecordTab() {
 
     if (!items.length) {
       setSaving(false)
-      setError('환율 정보가 없어서 저장할 수 없어요. 설정 탭에서 환율을 먼저 입력해주세요.')
+      setError('환율 정보를 가져오지 못했어요. 설정 탭에서 환율을 직접 입력해주세요.')
       return
     }
 
