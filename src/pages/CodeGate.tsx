@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useTrip } from '../context/TripContext'
 
-export function CodeGate() {
+export function CodeGate({ onCreateTrip }: { onCreateTrip: () => void }) {
   const { connectTrip, error: contextError } = useTrip()
   const [code, setCode] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -52,6 +52,13 @@ export function CodeGate() {
           여행 관리자에게 받은 8자리 코드를 입력하면 그 여행 가계부로 들어가요.
           한 번 입력하면 다음부터는 자동으로 열려요.
         </p>
+        <button
+          className="btn quiet sm"
+          style={{ width: 'auto', marginTop: 24, padding: '6px 10px' }}
+          onClick={onCreateTrip}
+        >
+          관리자이신가요? 새 여행 만들기
+        </button>
       </div>
     </div>
   )

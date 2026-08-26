@@ -95,6 +95,7 @@ SPEC 5장의 5단계 우선순위 중 4번(외부 API 자동 조회)은 6단계(
 - [x] 8. pwa-offline (vite-plugin-pwa manifest+SW, 테마에 맞는 아이콘 신규 제작, IndexedDB 오프라인 큐(idb)로 entries insert/update/delete 큐잉, online 이벤트 시 자동 flush, 12초 폴링으로 Realtime 대체(6-2 참고). Playwright로 오프라인 저장→온라인 자동 동기화→중복 없음까지 검증 완료)
 - [x] 9. share-target (Android Web Share Target Level 2 — POST/multipart/form-data/params.files로 manifest 구성, injectManifest 모드로 전환해 커스텀 SW(src/sw.ts)가 /share-target POST를 가로채 IndexedDB에 저장 후 리다이렉트, 클라이언트는 ?share-target=1을 감지해 자동으로 사진 분석 트리거. 설정 탭에 iOS/Android 홈 화면 설치 + 캡쳐 공유 방식 차이 안내 추가. Playwright로 SW 라우트 응답/IndexedDB 저장/자동 분석 트리거까지 검증 완료. 단, 실제 안드로이드 OS 공유 시트 자체는 브라우저 자동화로 재현 불가하므로 실기기 테스트 필요)
 - [x] 10. deploy (GitHub 퍼블릭 저장소 https://github.com/summerjhy/travelbudget 생성 및 푸시. Cloudflare Pages 연동 및 배포 성공: https://travelbudget-dgv.pages.dev/ — 실제 프로덕션에서 코드입력→Supabase 조회→이름입력까지 Playwright로 검증 완료. GitHub Actions 핑 워크플로 추가. **10단계 전체 완료**)
+- [x] 11. (10단계 이후 추가) create-trip UI — 배포 직후 "실제 사용자가 새 여행을 만들 화면이 없다"는 것을 뒤늦게 발견. CodeGate에 "관리자이신가요? 새 여행 만들기" 링크를 추가하고, 관리자 비밀번호+코드+이름+시작일/종료일+목적지(복수, 칩 추가/삭제)+통화(복수, 칩 토글) 입력 폼(`CreateTripForm`)을 만들어 기존 `create-trip` Edge Function과 연결했다. 생성 성공 시 자동으로 `connectTrip`을 호출해 곧바로 그 여행으로 진입한다. Playwright로 잘못된 비밀번호 거부와 정상 생성(목적지/통화 복수 저장 확인) 둘 다 검증 완료.
 
 ### 3단계에서 확정된 구현 세부사항
 - `src/lib/supabase.ts`: `setTripCode()`로 모듈 레벨 변수를 갱신하면 `global.fetch` 래퍼가 매 요청에 `x-trip-code` 헤더를 붙인다.

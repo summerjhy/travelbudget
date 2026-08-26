@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { TripProvider, useTrip } from './context/TripContext'
 import { CodeGate } from './pages/CodeGate'
+import { CreateTripForm } from './pages/CreateTripForm'
 import { NameGate } from './pages/NameGate'
 import { TripLayout } from './pages/TripLayout'
 import { RecordTab } from './pages/RecordTab'
@@ -8,7 +10,8 @@ import { HistoryTab } from './pages/HistoryTab'
 import { SettingsTab } from './pages/SettingsTab'
 
 function Gate() {
-  const { loading, trip, personName } = useTrip()
+  const { loading, trip, personName, connectTrip } = useTrip()
+  const [showCreateForm, setShowCreateForm] = useState(false)
 
   if (loading) {
     return (
@@ -20,7 +23,20 @@ function Gate() {
     )
   }
 
-  if (!trip) return <CodeGate />
+  if (!trip) {
+    if (showCreateForm) {
+      return (
+        <CreateTripForm
+          onBack={() => setShowCreateForm(false)}
+          onCreated={(code) => {
+            setShowCreateForm(false)
+            connectTrip(code)
+          }}
+        />
+      )
+    }
+    return <CodeGate onCreateTrip={() => setShowCreateForm(true)} />
+  }
   if (!personName) return <NameGate />
 
   return (
