@@ -12,14 +12,14 @@ import { latestRateFor } from '../lib/rates'
 
 export function TripLayout() {
   const { trip } = useTrip()
-  const { members } = useTripMembers(trip?.id)
+  const { allMembers } = useTripMembers(trip?.id)
   const { rates } = useRates(trip?.id, trip?.code)
   const { entries, refresh } = useEntries(trip?.id)
   const { total: budgetTotal } = useBudgets(trip?.id)
   usePolling(refresh, !!trip?.id)
 
   const summary = summaryCurrency(trip)
-  const totals = computeTotals(entries, members, budgetTotal, summary, latestRateFor(rates, summary))
+  const totals = computeTotals(entries, allMembers, budgetTotal, summary, latestRateFor(rates, summary))
 
   return (
     <div className="wrap">

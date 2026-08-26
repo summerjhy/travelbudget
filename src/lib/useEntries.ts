@@ -22,6 +22,8 @@ export interface NewEntryInput {
   cny: number
   currency: string
   rate: number | null
+  payment_method: string
+  paid_by: string | null
   source: Entry['source']
   created_by: string | null
 }
