@@ -94,7 +94,7 @@ SPEC 5장의 5단계 우선순위 중 4번(외부 API 자동 조회)은 6단계(
 - [x] 7. image-parsing (parse-image Edge Function: gemini-flash-latest 별칭, 여러 장 병렬 처리(Promise.allSettled), 503 1회 재시도, 429/기타 실패는 그 장만 null. 클라이언트 리사이즈(1600px/JPEG 0.8) + RecordTab 사진 업로드 UI. 실제 카드사 캡쳐로 정확도 검증 완료)
 - [x] 8. pwa-offline (vite-plugin-pwa manifest+SW, 테마에 맞는 아이콘 신규 제작, IndexedDB 오프라인 큐(idb)로 entries insert/update/delete 큐잉, online 이벤트 시 자동 flush, 12초 폴링으로 Realtime 대체(6-2 참고). Playwright로 오프라인 저장→온라인 자동 동기화→중복 없음까지 검증 완료)
 - [x] 9. share-target (Android Web Share Target Level 2 — POST/multipart/form-data/params.files로 manifest 구성, injectManifest 모드로 전환해 커스텀 SW(src/sw.ts)가 /share-target POST를 가로채 IndexedDB에 저장 후 리다이렉트, 클라이언트는 ?share-target=1을 감지해 자동으로 사진 분석 트리거. 설정 탭에 iOS/Android 홈 화면 설치 + 캡쳐 공유 방식 차이 안내 추가. Playwright로 SW 라우트 응답/IndexedDB 저장/자동 분석 트리거까지 검증 완료. 단, 실제 안드로이드 OS 공유 시트 자체는 브라우저 자동화로 재현 불가하므로 실기기 테스트 필요)
-- [ ] 10. deploy
+- [x] 10. deploy (GitHub 퍼블릭 저장소 https://github.com/summerjhy/travelbudget 생성 및 푸시. Cloudflare Pages 연동 및 배포 성공: https://travelbudget-dgv.pages.dev/ — 실제 프로덕션에서 코드입력→Supabase 조회→이름입력까지 Playwright로 검증 완료. GitHub Actions 핑 워크플로 추가. **10단계 전체 완료**)
 
 ### 3단계에서 확정된 구현 세부사항
 - `src/lib/supabase.ts`: `setTripCode()`로 모듈 레벨 변수를 갱신하면 `global.fetch` 래퍼가 매 요청에 `x-trip-code` 헤더를 붙인다.
@@ -141,6 +141,13 @@ SPEC 5장의 5단계 우선순위 중 4번(외부 API 자동 조회)은 6단계(
 - **로컬id와 마찬가지로 파일 전달도 IndexedDB를 거친다**: 서비스워커의 fetch 핸들러는 응답으로 값을 반환할 뿐 클라이언트 JS 컨텍스트와 직접 통신할 수 없으므로, 받은 File들을 `travelbudget-share`라는 별도 IndexedDB(오프라인 큐와는 다른 DB)에 `pending` 키로 저장하고 `/?share-target=1`로 303 리다이렉트한다. React 앱은 마운트 시 이 쿼리 파라미터를 보고 `consumeSharedFiles()`로 꺼낸 뒤 즉시 `history.replaceState`로 URL을 정리하고 `RecordTab`의 사진 분석 파이프라인(`processPhotos`)에 그대로 흘려보낸다.
 - **테스트 한계**: 실제 안드로이드 공유 시트(다른 앱에서 "공유" 버튼 → 앱 목록에 이 PWA가 뜨는 것)는 OS 레벨 통합이라 헤드리스 브라우저 자동화로 재현할 수 없다. 대신 `<form method=POST enctype=multipart/form-data>` 제출로 실제 공유가 발생시키는 것과 동일한 요청을 만들어 SW 라우트→IndexedDB 저장→클라이언트 자동 트리거까지의 배관을 검증했다. 실기기(설치된 PWA에서 실제 공유 시트 사용)로 최종 확인이 필요하다.
 
+### 10단계에서 확정된 구현 세부사항 — Cloudflare Pages 배포 시행착오
+- **GitHub CLI 설치/인증**: 이 개발 환경에 `gh`가 없어 `winget install GitHub.cli`로 설치하고, 브라우저 로그인이 불가능한 비대화형 세션이라 `gh auth login --web`의 디바이스 코드 플로우(사용자가 https://github.com/login/device 에서 코드 입력)로 인증했다. 첫 로그인은 `repo` 스코프만 받았는데, `.github/workflows/*.yml` 파일을 푸시하려면 `workflow` 스코프가 별도로 필요해 `gh auth refresh -s workflow`로 한 번 더 디바이스 코드 인증을 거쳤다.
+- **로컬 브랜치명 master → main으로 통일**: GitHub 기본값과 맞추기 위해 `git branch -m master main` 후 푸시.
+- **Cloudflare Pages의 "Deploy command"는 최신 UI의 함정이다**: Cloudflare가 Workers/Pages를 통합하면서, Git 연동으로 새 프로젝트를 만들면 "Create a Worker" 흐름을 타고 Deploy command에 `npx wrangler deploy`(Workers용 명령)가 기본값으로 들어간다. 정적 SPA인 이 프로젝트에는 맞지 않아 `npx wrangler pages deploy dist --project-name=travelbudget`로 고쳐야 했다(프로젝트명 인자 없이 `wrangler pages deploy dist`만 쓰면 비대화형 CI에서 "Missing Pages project name" 에러가 남).
+- **그래도 실패한다면 애초에 리소스 타입이 잘못 만들어진 것이다**: Deploy command를 고쳐도 "API 토큰 인증 오류(code 10000)"와 "The Pages project does not exist" 에러가 연달아 났다. 근본 원인은 Cloudflare가 Git 연동 시 이 프로젝트 자체를 **Workers 타입 리소스**로 생성해버린 것 — Pages 프로젝트가 애초에 존재하지 않으니 `wrangler pages deploy`가 아무리 정확해도 실패한다. **해결책은 설정을 고치는 게 아니라 프로젝트를 삭제하고 Workers & Pages 생성 화면에서 명시적으로 "Pages" 탭(Workers 탭이 아니라)을 선택해 처음부터 다시 만드는 것**이었다. 순수 Pages로 만들면 Deploy command 입력란 자체가 없거나 불필요해진다.
+- **최종 배포 URL**: https://travelbudget-dgv.pages.dev/ — Cloudflare가 자동 생성한 `<project-name>-<random>.pages.dev` 형식. 커스텀 도메인 연결은 하지 않음(여행 중 임시 사용 목적이라 불필요 판단).
+
 ## 작업 순서 (커밋 단위)
 
 1. **scaffold** — Vite+React+TS, 디자인 토큰/폰트 이식, 라우팅 스켈레톤
@@ -154,16 +161,19 @@ SPEC 5장의 5단계 우선순위 중 4번(외부 API 자동 조회)은 6단계(
 9. **share-target** — Android Web Share Target, iOS 안내
 10. **deploy** — GitHub 퍼블릭 저장소, Cloudflare Pages 연동, GitHub Actions 핑 워크플로
 
-4단계까지 MVP. 여행 전(2026-09-03) 목표는 7단계까지.
+4단계까지 MVP. 여행 전(2026-09-03) 목표는 7단계까지였으나, **2026-08-27 기준 1~10단계 전부 완료 및 배포까지 마침** (https://travelbudget-dgv.pages.dev/). 여행 전까지 남은 기간은 실기기(iOS/Android) 테스트, 참여자 4명 온보딩, 실제 결제 캡쳐로 파싱 정확도 재검증에 활용.
 
 ## 사용자 외부 작업 체크리스트
 
-- [ ] GitHub 퍼블릭 저장소 생성 (1단계)
-- [ ] Supabase 프로젝트 생성, URL/anon key 발급 (2단계 시작 전 필수)
-- [ ] Gemini API 키 발급 — Google AI Studio (7단계 시작 전 필수)
-- [ ] Cloudflare 계정 + Pages↔GitHub 연동 (10단계, 미리 해둬도 무방)
-- [ ] 실제 카드사 해외결제 캡쳐 샘플 준비 (7단계 테스트용)
-- [ ] 친구들에게 여행 코드 링크 공유 (배포 후 리허설)
+- [x] GitHub 퍼블릭 저장소 생성 — https://github.com/summerjhy/travelbudget
+- [x] Supabase 프로젝트 생성, URL/anon key 발급 — travel_budget_summer (qyufjajkgttffilluygm)
+- [x] Gemini API 키 발급 — Google AI Studio, Edge Function 시크릿으로 등록 완료
+- [x] Cloudflare 계정 + Pages↔GitHub 연동 — https://travelbudget-dgv.pages.dev/ 배포 완료
+- [x] 실제 카드사 해외결제 캡쳐 샘플 준비 — 하나은행 UPI 캡쳐로 파싱 정확도 검증 완료(7단계)
+- [ ] GitHub Actions Secrets에 `SUPABASE_URL`, `SUPABASE_ANON_KEY` 등록 — supabase-ping.yml 워크플로 동작에 필요 (저장소 Settings → Secrets and variables → Actions)
+- [ ] 친구들에게 여행 코드(`20260903`) 공유 — 배포 후 리허설
+- [ ] 실기기(iOS Safari, Android Chrome) 홈 화면 설치 테스트
+- [ ] 실기기 Android에서 실제 공유 시트로 카드 캡쳐 → 이 앱 자동 분석 테스트 (9단계, 헤드리스 환경에서 검증 불가했던 부분)
 
 ## 코딩 컨벤션
 - 커밋은 위 10단계와 1:1 대응시키되, 각 단계 내에서도 논리적으로 쪼갤 수 있으면 쪼갠다.
