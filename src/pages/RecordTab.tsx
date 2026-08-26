@@ -2,8 +2,10 @@ import { useRef, useState, type ChangeEvent } from 'react'
 import { useTrip } from '../context/TripContext'
 import { useTripMembers } from '../lib/useTripMembers'
 import { useRates } from '../lib/useRates'
-import { useEntries, type NewEntryInput } from '../lib/useEntries'
+import { useEntries, type NewEntryInput, type PendingEntry } from '../lib/useEntries'
 import { useBudgets } from '../lib/useBudgets'
+import { useOfflineSync } from '../lib/useOfflineSync'
+import { usePolling } from '../lib/usePolling'
 import { parseText, type ParsedEntry } from '../lib/parser'
 import { guessCategory } from '../lib/categories'
 import { resolveAmount } from '../lib/rates'
@@ -34,19 +36,25 @@ export function RecordTab() {
   const { trip, personName } = useTrip()
   const { members } = useTripMembers(trip?.id)
   const { ratesByDate, fetchNow } = useRates(trip?.id, trip?.code)
-  const { entries, addEntries } = useEntries(trip?.id)
+  const { entries, addEntries, refresh } = useEntries(trip?.id)
   const { total: budgetTotal } = useBudgets(trip?.id)
+  const { online } = useOfflineSync(trip?.id, refresh)
+  usePolling(refresh, !!trip?.id)
 
   const [text, setText] = useState('')
   const [preview, setPreview] = useState<PreviewItem[]>([])
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [parsingImages, setParsingImages] = useState(false)
-  const [lastSaved, setLastSaved] = useState<Entry[] | null>(null)
+  const [lastSavedIds, setLastSavedIds] = useState<string[] | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const memberNames = members.map((m) => m.personName)
   const totals = computeTotals(entries, members, budgetTotal, latestRate(ratesByDate))
+  // entries에서 최신 상태(pending 여부 포함)를 그때그때 조회한다 — id는 온라인 동기화 후에도 유지된다(로컬id는 즉시 반영, 서버id는 그대로).
+  const lastSaved: PendingEntry[] = lastSavedIds
+    ? lastSavedIds.map((id) => entries.find((e) => e.id === id)).filter((e): e is PendingEntry => !!e)
+    : []
 
   function handleParse() {
     setError(null)
@@ -136,10 +144,17 @@ export function RecordTab() {
       new Set(preview.filter((p) => p.amount > 0).map((p) => p.date ?? todayDate())),
     )
     const rates = { ...ratesByDate }
+    const fallbackRate = latestRate(ratesByDate)
     for (const date of neededDates) {
       if (rates[date] !== undefined) continue
       const result = await fetchNow(date)
-      if (result.ok && result.rate !== undefined) rates[date] = result.rate
+      if (result.ok && result.rate !== undefined) {
+        rates[date] = result.rate
+      } else if (fallbackRate) {
+        // 오프라인 등으로 조회가 안 되면 가장 최근 캐시 환율을 임시로 쓴다.
+        // 온라인 복귀 후 정확한 환율이 있으면 사용자가 내역 탭에서 다시 고칠 수 있다.
+        rates[date] = fallbackRate
+      }
     }
 
     const items: NewEntryInput[] = []
@@ -177,13 +192,19 @@ export function RecordTab() {
       setError(result.error ?? '저장에 실패했어요.')
       return
     }
-    setLastSaved(result.inserted ?? null)
+    setLastSavedIds(result.inserted ? result.inserted.map((e) => e.id) : null)
     setPreview([])
     setText('')
   }
 
   return (
     <section className="pad">
+      {!online && (
+        <p className="note" style={{ color: 'var(--marigold)', marginBottom: 9 }}>
+          지금 오프라인이에요. 입력은 계속할 수 있고, 온라인이 되면 자동으로 저장돼요.
+        </p>
+      )}
+
       <input
         ref={fileInputRef}
         type="file"
@@ -192,8 +213,8 @@ export function RecordTab() {
         style={{ display: 'none' }}
         onChange={handlePhotoSelect}
       />
-      <button className="btn" onClick={() => fileInputRef.current?.click()} disabled={parsingImages}>
-        {parsingImages ? <><span className="spin" />분석 중...</> : '사진으로 읽어들이기'}
+      <button className="btn" onClick={() => fileInputRef.current?.click()} disabled={parsingImages || !online}>
+        {parsingImages ? <><span className="spin" />분석 중...</> : online ? '사진으로 읽어들이기' : '사진 인식은 온라인에서만 가능해요'}
       </button>
       <p className="note" style={{ margin: '9px 0' }}>
         카드사 앱의 해외결제 상세내역 캡쳐를 올리면 자동으로 읽어요. 최대 5장.
@@ -290,6 +311,7 @@ export function RecordTab() {
                   <span className={'badge ' + (e.member_id ? 'self' : 'fund')}>
                     {e.member_id ? '개인' : '공금'}
                   </span>
+                  {e.pending && <span className="badge" style={{ marginLeft: 6, background: 'rgba(201,138,30,.15)', color: 'var(--marigold)' }}>동기화 대기중</span>}
                 </span>
               </div>
             </div>

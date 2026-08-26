@@ -4,6 +4,7 @@ import { useTripMembers } from '../lib/useTripMembers'
 import { useRates } from '../lib/useRates'
 import { useEntries } from '../lib/useEntries'
 import { useBudgets } from '../lib/useBudgets'
+import { usePolling } from '../lib/usePolling'
 import { computeTotals } from '../lib/totals'
 import { won, yuan } from '../lib/format'
 
@@ -16,8 +17,9 @@ export function TripLayout() {
   const { trip } = useTrip()
   const { members } = useTripMembers(trip?.id)
   const { ratesByDate } = useRates(trip?.id, trip?.code)
-  const { entries } = useEntries(trip?.id)
+  const { entries, refresh } = useEntries(trip?.id)
   const { total: budgetTotal } = useBudgets(trip?.id)
+  usePolling(refresh, !!trip?.id)
 
   const totals = computeTotals(entries, members, budgetTotal, latestRate(ratesByDate))
 

@@ -66,6 +66,11 @@ SPEC.md 원안은 "8~10자 랜덤 코드를 시스템이 자동 발급 + URL 링
 ### 6. 오프라인 큐 범위
 IndexedDB 큐잉 + 온라인 복귀 동기화는 **8단계에서만** 구현한다. 1~7단계는 온라인 연결을 전제로 동작해도 된다.
 
+### 6-2. 실시간 반영 — Realtime 대신 폴링 (SPEC 8장 변경)
+SPEC 8장은 "Supabase Realtime 구독으로 다른 사람 입력이 즉시 반영"을 명시했지만, RLS를 `x-trip-code` 커스텀 헤더 기반(4-1)으로 설계한 결과 **Realtime(WebSocket) 구독에서는 이 RLS가 동작하지 않는다** — 브라우저의 WebSocket 핸드셰이크는 임의의 커스텀 헤더를 보내지 못하므로 `current_setting('request.headers')`가 항상 비어 정책이 거부된다(REST 요청에서는 정상 동작, Realtime에서만 실패). 이는 8단계에서 실제로 검증 시도하다 발견한 사실이다.
+
+대안으로 Realtime 대신 짧은 간격(10~15초) 폴링으로 대체한다. REST 기반이라 기존 RLS를 그대로 쓸 수 있고, 친구 4명 규모에서는 체감상 "거의 즉시"로 충분하다. RLS를 JWT 기반으로 전면 재설계하는 방안은 검토했으나 2단계 스키마/인증 구조를 다시 바꿔야 하는 큰 변경이라 채택하지 않음.
+
 ### 6-1. 환율 계산 — 4단계(MVP) 범위 제한
 SPEC 5장의 5단계 우선순위 중 4번(외부 API 자동 조회)은 6단계(fx-rates, Edge Function) 몫이다. 4단계(mvp-record)에서는 다음만 구현한다:
 
@@ -87,7 +92,7 @@ SPEC 5장의 5단계 우선순위 중 4번(외부 API 자동 조회)은 6단계(
 - [x] 5. history-tab (합계 박스, 카테고리/사람 필터, 날짜별 그룹핑, 인라인 편집·삭제. Playwright로 편집/삭제 후 합계 재계산까지 검증 완료)
 - [x] 6. fx-rates (fetch-rate Edge Function: frankfurter.app→open.er-api.com 폴백→최근값 폴백. 설정 탭 환율 목록/직접입력/지금조회, 예산 추가/삭제 UI. RecordTab 저장 시 캐시에 없는 날짜 자동 조회. Playwright + curl로 캐시/외부조회/CORS/직접입력 우선순위까지 전부 검증 완료)
 - [x] 7. image-parsing (parse-image Edge Function: gemini-flash-latest 별칭, 여러 장 병렬 처리(Promise.allSettled), 503 1회 재시도, 429/기타 실패는 그 장만 null. 클라이언트 리사이즈(1600px/JPEG 0.8) + RecordTab 사진 업로드 UI. 실제 카드사 캡쳐로 정확도 검증 완료)
-- [ ] 8. pwa-offline
+- [x] 8. pwa-offline (vite-plugin-pwa manifest+SW, 테마에 맞는 아이콘 신규 제작, IndexedDB 오프라인 큐(idb)로 entries insert/update/delete 큐잉, online 이벤트 시 자동 flush, 12초 폴링으로 Realtime 대체(6-2 참고). Playwright로 오프라인 저장→온라인 자동 동기화→중복 없음까지 검증 완료)
 - [ ] 9. share-target
 - [ ] 10. deploy
 
@@ -121,6 +126,14 @@ SPEC 5장의 5단계 우선순위 중 4번(외부 API 자동 조회)은 6단계(
 - **여러 장 처리 방식**: 순차가 아니라 `Promise.allSettled`로 병렬 전송한다. 사진 5장을 순차로 하면 5×35초가 걸리지만 병렬이면 가장 느린 한 장 시간(+503 재시도 시 최대 +2초)만큼만 걸린다. 실측: 3장 순차 대비 병렬이 약 40% 단축(105초→60초). 한 장이 429/503/파싱실패로 null이 나와도 다른 장의 결과는 그대로 유지된다(요구사항: "그 사진만 실패, 나머지는 계속 진행").
 - **디버깅 교훈**: Edge Function 응답이 `results: [null]`로 오는 게 항상 버그는 아니다 — `function_logs`(콘솔 로그, `function_edge_logs`와 다른 소스)를 봐야 Gemini의 실제 503/429 원인 메시지가 보인다. curl/스크립트로 같은 요청을 반복하면 재현되지 않을 수 있다(비결정적 서비스 상태이므로 3회 이상 반복 테스트로 확인할 것).
 - `prompt.ts`의 시스템 프롬프트는 카드번호/계좌번호를 응답에 절대 포함하지 말라는 지침을 명시하고, Edge Function은 이미지를 저장하지 않고 파싱 후 즉시 폐기한다(SPEC 6-1 준수). 실제 하나은행 UPI 해외결제 캡쳐로 가맹점명/원화/외화/통화 4개 필드 모두 정확히 추출됨을 확인(카드번호는 응답에 없음).
+
+### 8단계에서 확정된 구현 세부사항
+- **아이콘 신규 제작**: create-vite 기본 템플릿의 보라색 아이콘은 프로젝트 테마와 무관해 `--jade`/`--marigold` 색상을 쓴 카드 모양 아이콘을 SVG로 새로 그리고 sharp로 192/512/512(maskable)/apple-touch-icon PNG를 생성했다. `favicon.svg`도 교체.
+- **Realtime → 폴링 전환 (6-2 참고)**: `x-trip-code` 커스텀 헤더 RLS가 WebSocket에서는 동작하지 않아 Realtime을 포기하고 `usePolling`(12초 간격, 탭이 보이고 온라인일 때만)으로 대체했다. `TripLayout`/`RecordTab`/`HistoryTab`이 각자 독립적으로 폴링하는 중복이 있지만, 동시접속 4명 규모에서는 무료 티어 대역폭(월 5GB)에 전혀 부담이 안 되어 그대로 둔다(리팩터링은 나중에 필요해지면).
+- **오프라인 감지의 함정**: supabase-js는 네트워크가 끊겨도 throw하지 않고 `{data: null, error}`로 정상 반환한다 — `try/catch`만으로는 오프라인을 감지할 수 없다. `isNetworkError()`가 `navigator.onLine`과 에러 메시지(`failed to fetch` 등)를 함께 봐서 판단한다. 이 함정 때문에 처음 구현에서는 오프라인 저장이 전부 "저장에 실패했어요"로 잘못 처리됐었다.
+- **오프라인 시 환율 처리**: 캐시에 없는 새 날짜를 오프라인에서 입력하면 `fetch-rate` 호출이 실패하므로, `latestRate(ratesByDate)`(가장 최근 캐시값)를 임시로 적용해 저장은 막지 않는다. 온라인 복귀 후 정확한 환율이 필요하면 내역 탭에서 재조정 가능.
+- **로컬id → 서버id 문제**: 오프라인 큐 항목은 `crypto.randomUUID()`로 임시 로컬id를 부여하는데, 온라인 동기화 후 서버가 새 id를 발급하므로 둘이 일치하지 않는다. "이번 사용금액" 카드는 저장 시점의 id 목록만 들고 있다가 `entries`에서 그때그때 찾아 렌더링하는 방식으로 단순화했다 — 동기화되면 로컬id를 못 찾아 카드가 조용히 사라진다(의도된 동작, 별도 매핑 테이블 없음).
+- **폴링/오프라인 동기화 후 pending 중복 집계 버그**: `useEntries.refresh()`가 기본적으로 로컬 pending 항목을 유지하는데, 오프라인 큐를 전부 flush한 직후에도 이 로직을 그대로 쓰면 서버 데이터(방금 반영됨)와 로컬 pending이 이중 집계된다. `refresh({ clearPending: true })` 옵션을 추가해 `useOfflineSync`가 큐를 전부 비웠을 때만 pending을 버리도록 구분했다.
 
 ## 작업 순서 (커밋 단위)
 

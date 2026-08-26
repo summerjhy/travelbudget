@@ -2,13 +2,13 @@ import { useMemo, useState } from 'react'
 import { useTrip } from '../context/TripContext'
 import { useTripMembers } from '../lib/useTripMembers'
 import { useRates } from '../lib/useRates'
-import { useEntries } from '../lib/useEntries'
+import { useEntries, type PendingEntry } from '../lib/useEntries'
 import { useBudgets } from '../lib/useBudgets'
+import { usePolling } from '../lib/usePolling'
 import { resolveAmount } from '../lib/rates'
 import { computeTotals } from '../lib/totals'
 import { CATEGORIES } from '../lib/categories'
 import { Pair } from '../components/Pair'
-import type { Entry } from '../lib/types'
 
 function latestRate(ratesByDate: Record<string, number>): number {
   const keys = Object.keys(ratesByDate).sort()
@@ -27,8 +27,9 @@ export function HistoryTab() {
   const { trip } = useTrip()
   const { members } = useTripMembers(trip?.id)
   const { ratesByDate } = useRates(trip?.id, trip?.code)
-  const { entries, updateEntry, removeEntry } = useEntries(trip?.id)
+  const { entries, updateEntry, removeEntry, refresh } = useEntries(trip?.id)
   const { total: budgetTotal } = useBudgets(trip?.id)
+  usePolling(refresh, !!trip?.id)
 
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
   const [memberFilter, setMemberFilter] = useState<string | null | 'ALL'>('ALL')
@@ -47,7 +48,7 @@ export function HistoryTab() {
   })
 
   const groups = useMemo(() => {
-    const map = new Map<string, Entry[]>()
+    const map = new Map<string, PendingEntry[]>()
     for (const e of filtered) {
       const list = map.get(e.date) ?? []
       list.push(e)
@@ -56,7 +57,7 @@ export function HistoryTab() {
     return Array.from(map.entries()).sort((a, b) => (a[0] < b[0] ? 1 : -1))
   }, [filtered])
 
-  function openEdit(e: Entry) {
+  function openEdit(e: PendingEntry) {
     setEditingId(e.id)
     setDraft({
       title: e.title,
@@ -205,6 +206,7 @@ export function HistoryTab() {
                   <div className="meta">
                     {e.date.slice(5).replace('-', '/')} · {e.category} ·{' '}
                     <span style={{ color: e.member_id ? 'var(--marigold)' : 'var(--jade)' }}>{memberName}</span>
+                    {e.pending && <span style={{ color: 'var(--marigold)' }}> · 동기화 대기중</span>}
                   </div>
                 </div>
                 <button className="x" onClick={(ev) => { ev.stopPropagation(); openEdit(e) }}>수정</button>
