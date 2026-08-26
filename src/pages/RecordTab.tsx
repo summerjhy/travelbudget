@@ -1,19 +1,25 @@
-import { useState } from 'react'
+import { useRef, useState, type ChangeEvent } from 'react'
 import { useTrip } from '../context/TripContext'
 import { useTripMembers } from '../lib/useTripMembers'
 import { useRates } from '../lib/useRates'
 import { useEntries, type NewEntryInput } from '../lib/useEntries'
 import { useBudgets } from '../lib/useBudgets'
 import { parseText, type ParsedEntry } from '../lib/parser'
+import { guessCategory } from '../lib/categories'
 import { resolveAmount } from '../lib/rates'
 import { computeTotals } from '../lib/totals'
 import { won, yuan } from '../lib/format'
+import { resizeAndCompressMany } from '../lib/imageResize'
+import { parseImages } from '../lib/parseImage'
 import { Pair } from '../components/Pair'
 import type { Entry } from '../lib/types'
 
 interface PreviewItem extends ParsedEntry {
   memberId: string | null
+  entrySource: Entry['source']
 }
+
+const MAX_PHOTOS = 5
 
 function todayDate(): string {
   return new Date().toISOString().slice(0, 10)
@@ -35,7 +41,9 @@ export function RecordTab() {
   const [preview, setPreview] = useState<PreviewItem[]>([])
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [parsingImages, setParsingImages] = useState(false)
   const [lastSaved, setLastSaved] = useState<Entry[] | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const memberNames = members.map((m) => m.personName)
   const totals = computeTotals(entries, members, budgetTotal, latestRate(ratesByDate))
@@ -49,19 +57,65 @@ export function RecordTab() {
       setPreview([])
       return
     }
-    setPreview(
-      parsed.map((p) => ({
+    setPreview((prev) => [
+      ...prev,
+      ...parsed.map((p) => ({
         ...p,
         memberId: members.find((m) => m.personName === p.personName)?.id ?? null,
         date: p.date ?? (trip && trip.start_date > todayDate() ? trip.start_date : todayDate()),
+        entrySource: 'text' as const,
       })),
-    )
+    ])
   }
 
   function handleClear() {
     setText('')
     setPreview([])
     setError(null)
+  }
+
+  async function handlePhotoSelect(e: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []).slice(0, MAX_PHOTOS)
+    e.target.value = ''
+    if (!files.length || !trip) return
+
+    setParsingImages(true)
+    setError(null)
+    try {
+      const images = await resizeAndCompressMany(files)
+      const result = await parseImages(trip.code, images)
+      if (!result.ok || !result.results) {
+        setError(result.error ?? '사진을 분석하지 못했어요. 직접입력을 이용해주세요.')
+        return
+      }
+
+      const defaultDate = trip.start_date > todayDate() ? trip.start_date : todayDate()
+      const newItems: PreviewItem[] = []
+      let failCount = 0
+      for (const r of result.results) {
+        if (!r || (r.krw === null && r.amount === null)) {
+          failCount++
+          continue
+        }
+        const isKRW = r.currency ? r.currency.toUpperCase() === 'KRW' : r.krw !== null && r.amount === null
+        newItems.push({
+          title: r.merchant || '지출',
+          category: guessCategory(r.merchant || ''),
+          personName: null,
+          memberId: null,
+          date: r.date ?? defaultDate,
+          amount: isKRW ? (r.krw ?? 0) : (r.amount ?? 0),
+          currency: isKRW ? 'KRW' : 'CNY',
+          entrySource: 'image',
+        })
+      }
+      setPreview((prev) => [...prev, ...newItems])
+      if (failCount > 0) {
+        setError(`${failCount}장은 인식하지 못했어요. 직접입력으로 추가해주세요.`)
+      }
+    } finally {
+      setParsingImages(false)
+    }
   }
 
   function updatePreviewItem(index: number, patch: Partial<PreviewItem>) {
@@ -106,7 +160,7 @@ export function RecordTab() {
         krw: resolved.krw,
         cny: resolved.cny,
         rate: resolved.rate,
-        source: 'text',
+        source: p.entrySource,
         created_by: personName,
       })
     }
@@ -130,6 +184,22 @@ export function RecordTab() {
 
   return (
     <section className="pad">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        style={{ display: 'none' }}
+        onChange={handlePhotoSelect}
+      />
+      <button className="btn" onClick={() => fileInputRef.current?.click()} disabled={parsingImages}>
+        {parsingImages ? <><span className="spin" />분석 중...</> : '사진으로 읽어들이기'}
+      </button>
+      <p className="note" style={{ margin: '9px 0' }}>
+        카드사 앱의 해외결제 상세내역 캡쳐를 올리면 자동으로 읽어요. 최대 5장.
+        결제 캡쳐는 분석 후 즉시 폐기되고 서버에 저장되지 않아요.
+      </p>
+
       <textarea
         className="ta"
         value={text}
