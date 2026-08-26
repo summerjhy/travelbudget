@@ -84,7 +84,8 @@ SPEC 5장의 5단계 우선순위 중 4번(외부 API 자동 조회)은 6단계(
 - [x] 2. schema (trips/people/trip_members/budgets/entries/rates + RLS + create-trip Edge Function 완료, 실제 프로젝트에 적용 및 curl 검증 완료)
 - [x] 3. trip-entry (코드 입력 → 이름 입력 → localStorage 캐시 → 재방문 자동 진입 → 설정 탭 "다른 여행 코드로 전환" 모두 Playwright로 검증 완료)
 - [x] 4. mvp-record (텍스트 파싱 → 편집 가능 미리보기 → 저장 → 이번 사용금액/공금외 누적/잔여예산 표시. **MVP 최소 사용 가능 지점 도달**. Playwright로 전체 흐름 검증 완료)
-- [ ] 5. history-tab
+- [x] 5. history-tab (합계 박스, 카테고리/사람 필터, 날짜별 그룹핑, 인라인 편집·삭제. Playwright로 편집/삭제 후 합계 재계산까지 검증 완료)
+- [ ] 6. fx-rates
 - [ ] 6. fx-rates
 - [ ] 7. image-parsing
 - [ ] 8. pwa-offline
@@ -102,6 +103,10 @@ SPEC 5장의 5단계 우선순위 중 4번(외부 API 자동 조회)은 6단계(
 - `src/lib/rates.ts`의 `resolveAmount`: 6-1에서 정한 대로 위안·원화 둘 다 입력 시 역산, 하나만 있으면 `rates` 캐시 조회까지만 하고 외부 API 호출은 하지 않는다. 캐시에도 없으면 `rate: null`을 반환하고 저장을 막는다.
 - 데이터 접근은 `useTripMembers`/`useRates`/`useEntries`/`useBudgets` 훅으로 분리했다. 각자 `tripId`를 받아 독립적으로 조회하고, 화면(`RecordTab`, `TripLayout`)에서 조합해서 쓴다. `TripContext`는 세션(코드/이름/멤버 신원)만 담당하고 지출 데이터는 갖지 않는다.
 - `src/lib/totals.ts`의 `computeTotals`: preview.html의 `totals()` 함수를 그대로 이식. 공금은 `member_id === null`인 entries, 개인 결제는 `trip_members.id` 기준으로 집계.
+
+### 5단계에서 확정된 구현 세부사항
+- `HistoryTab`의 카테고리/사람 필터는 SPEC 7장 요구사항이지만 preview.html 프로토타입엔 없던 기능이라 새로 설계해 추가했다. 사람 필터의 `null`은 "공금"을, `'ALL'`은 필터 없음을 의미하는 3상태(`string | null | 'ALL'`).
+- 인라인 편집은 preview.html의 `editCard()`를 그대로 이식(제목/위안/원화/결제자 칩/날짜/삭제/취소/저장). 저장 시 `resolveAmount`로 재계산하므로 위안·원화 중 하나만 바꿔도 다른 쪽이 환율로 자동 갱신된다.
 
 ## 작업 순서 (커밋 단위)
 
