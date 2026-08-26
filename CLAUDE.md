@@ -71,6 +71,12 @@ SPEC 8장은 "Supabase Realtime 구독으로 다른 사람 입력이 즉시 반�
 
 대안으로 Realtime 대신 짧은 간격(10~15초) 폴링으로 대체한다. REST 기반이라 기존 RLS를 그대로 쓸 수 있고, 친구 4명 규모에서는 체감상 "거의 즉시"로 충분하다. RLS를 JWT 기반으로 전면 재설계하는 방안은 검토했으나 2단계 스키마/인증 구조를 다시 바꿔야 하는 큰 변경이라 채택하지 않음.
 
+### 6-3. 통화 모델 (13단계)
+- 한 여행이 여러 통화를 쓸 수 있다. `trips.spend_currencies`가 목록이고, 원화는 목록에 없어도 항상 고를 수 있다(`tripCurrency.tripCurrencies`).
+- `entries.cny` 컬럼은 **이름만 위안**이고 실제로는 "그 건의 외화 금액"이다. 어느 통화인지는 `entries.currency`를 봐야 한다. 컬럼명을 바꾸면 배포 중인 클라이언트와 IndexedDB 오프라인 큐가 깨져서 이름은 두고 주석으로만 뜻을 박아뒀다.
+- 합계(공금/개인/잔여)는 언제나 원화 기준이다. 원화 옆에 외화를 병기하는 건 **외화가 정확히 하나일 때만** 한다(`summaryCurrency`) — 통화가 섞이면 서로 다른 돈을 더한 수가 되어버린다. 개별 항목은 각자 자기 통화로 표시된다.
+- 옛 행은 `currency`가 null로 올 수 있고 그때는 CNY로 읽는다(`totals.entryCurrency`, `useRates.refresh`).
+
 ### 6-1. 환율 계산 — 4단계(MVP) 범위 제한
 SPEC 5장의 5단계 우선순위 중 4번(외부 API 자동 조회)은 6단계(fx-rates, Edge Function) 몫이다. 4단계(mvp-record)에서는 다음만 구현한다:
 
@@ -97,6 +103,7 @@ SPEC 5장의 5단계 우선순위 중 4번(외부 API 자동 조회)은 6단계(
 - [x] 10. deploy (GitHub 퍼블릭 저장소 https://github.com/summerjhy/travelbudget 생성 및 푸시. Cloudflare Pages 연동 및 배포 성공: https://travelbudget-dgv.pages.dev/ — 실제 프로덕션에서 코드입력→Supabase 조회→이름입력까지 Playwright로 검증 완료. GitHub Actions 핑 워크플로 추가. **10단계 전체 완료**)
 - [x] 11. (10단계 이후 추가) create-trip UI — 배포 직후 "실제 사용자가 새 여행을 만들 화면이 없다"는 것을 뒤늦게 발견. CodeGate에 "관리자이신가요? 새 여행 만들기" 링크를 추가하고, 관리자 비밀번호+코드+이름+시작일/종료일+목적지(복수, 칩 추가/삭제)+통화(복수, 칩 토글) 입력 폼(`CreateTripForm`)을 만들어 기존 `create-trip` Edge Function과 연결했다. 생성 성공 시 자동으로 `connectTrip`을 호출해 곧바로 그 여행으로 진입한다. Playwright로 잘못된 비밀번호 거부와 정상 생성(목적지/통화 복수 저장 확인) 둘 다 검증 완료.
 - [x] 12. (11단계 이후 추가) 통화·목적지 선택 UI — 새 여행 만들기 폼의 통화가 6개 칩(CNY/JPY/USD/EUR/THB/VND)뿐이고 목적지는 자유 텍스트라 오탈자·표기 불일치가 생기는 문제. `src/lib/currencies.ts`(7개 지역 optgroup, 73개 통화, `KRW (한국 원)` 형식 라벨)와 `src/lib/destinations.ts`(7개 대륙 → 나라 → 도시 트리)를 추가하고 폼을 드롭다운 기반으로 바꿨다. 통화 기본 선택은 `CNY` → `KRW`. 목적지는 대륙→나라→도시 3단 종속 셀렉트에 "도시 미정 (나라만)"과 "직접 입력…" 탈출구를 두고, 저장 형식은 기존과 같은 `"중국 상하이"` 문자열이라 DB 스키마(`trips.destinations text[]`)와 Edge Function은 그대로다. `.sel` CSS 클래스를 새로 만들어 네이티브 select를 `.inp`과 같은 모양으로 통일. 목적지에서 **나라를 고르면 그 나라 통화가 사용 통화에 자동 추가**된다(KRW는 처음부터 선택). 자동 추가된 통화도 칩을 눌러 뺄 수 있다. 나라↔통화 매핑은 `CountryOption.currency`에 두고, 타입을 `CurrencyCode`(= `CURRENCY_GROUPS`에서 뽑아낸 리터럴 유니온, `as const satisfies`)로 잡아 목록에 없는 코드를 쓰면 `tsc`가 잡아낸다. Playwright로 기본 KRW 선택/나라 선택 시 통화 자동 추가(EUR·KRW 중복 없음)/자동 추가분 삭제/도시 3가지 경로(도시 선택·도시 미정·직접 입력) 모두 검증 완료.
+- [x] 13. (12단계 이후 추가) 여러 통화 지원 + 환율 날짜 버그 — 내역·설정 탭이 여행 설정과 무관하게 계속 "위안" 기준으로 뜨고, 환율 조회 날짜가 오늘이 아니라 여행 시작일로 잡히던 문제. **마이그레이션 0003**으로 `entries.currency`(그 건의 외화가 뭔지)와 `rates.currency`(기본키를 `(trip_id, date)` → `(trip_id, date, currency)`로 확장)를 추가했다. 둘 다 기본값 `'CNY'`라 기존 행은 그대로 유지된다. 기록 탭 입력창 위에 **입력 단위 선택 버튼**을 두고(통화가 둘 이상일 때), 고른 값은 `localStorage`에 여행별로 저장돼 바꾸기 전까지 유지된다. 기본값은 목적지 나라 통화(`defaultCurrency`). 단위를 안 적은 숫자는 **무조건 선택된 통화**로 읽는다 — 예전의 "10000 넘으면 원화" 추정은 제거했다(선택 버튼이 보이는데 추정까지 하면 더 헷갈림). 설정 탭 환율은 여행에 설정된 외화를 **한 번에 일괄 조회**하고(fetch-rate가 `spend_currencies`를 보고 전부 돌려줌) 날짜 × 통화 표로 보여준다. 환율/예산 날짜는 항상 오늘.
 
 ### 3단계에서 확정된 구현 세부사항
 - `src/lib/supabase.ts`: `setTripCode()`로 모듈 레벨 변수를 갱신하면 `global.fetch` 래퍼가 매 요청에 `x-trip-code` 헤더를 붙인다.

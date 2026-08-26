@@ -139,8 +139,46 @@ for (const group of CURRENCY_GROUPS as readonly CurrencyGroup[]) {
   for (const item of group.items) BY_CODE.set(item.code, item)
 }
 
+/**
+ * 금액 뒤에 바로 붙여 쓸 수 있는 기호. 한국에서도 널리 통하고 접미사로 자연스러운 것만 넣는다.
+ * 여기 없는 통화는 `380 TWD`처럼 코드를 띄어쓰기와 함께 붙인다 (foreign() 참고).
+ */
+const SUFFIX: Record<string, string> = {
+  KRW: '원',
+  CNY: '元',
+  JPY: '¥',
+  EUR: '€',
+  GBP: '£',
+  THB: '฿',
+  VND: '₫',
+  INR: '₹',
+  PHP: '₱',
+}
+
+/** `CNY` → `元`, `TWD` → `TWD`. 금액 뒤에 붙여 쓰는 표기. */
+export function currencySuffix(code: string): string {
+  return SUFFIX[code] ?? code
+}
+
+/** SUFFIX 에 있는 기호는 금액에 딱 붙이고, 코드를 쓸 때만 한 칸 띄운다. */
+export function currencyNeedsSpace(code: string): boolean {
+  return SUFFIX[code] === undefined
+}
+
 /** `KRW` → `KRW (한국 원)`. 목록에 없는 코드는 코드 그대로 돌려준다. */
 export function currencyLabel(code: string): string {
   const c = BY_CODE.get(code)
   return c ? `${c.code} (${c.country} ${c.unit})` : code
+}
+
+/** 통화 선택 버튼용 짧은 표기. `CNY` → `元 CNY`, `TWD` → `TWD` (기호가 곧 코드면 한 번만). */
+export function currencyChip(code: string): string {
+  const suffix = currencySuffix(code)
+  return suffix === code ? code : `${suffix} ${code}`
+}
+
+/** `TWD` → `대만 달러`. "1대만 달러당 원화"처럼 문장에 넣어 쓴다. */
+export function currencyName(code: string): string {
+  const c = BY_CODE.get(code)
+  return c ? `${c.country} ${c.unit}` : code
 }

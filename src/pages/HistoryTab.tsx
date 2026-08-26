@@ -5,20 +5,19 @@ import { useRates } from '../lib/useRates'
 import { useEntries, type PendingEntry } from '../lib/useEntries'
 import { useBudgets } from '../lib/useBudgets'
 import { usePolling } from '../lib/usePolling'
-import { resolveAmount } from '../lib/rates'
-import { computeTotals } from '../lib/totals'
+import { latestRateFor, resolveAmount } from '../lib/rates'
+import { computeTotals, entryCurrency } from '../lib/totals'
 import { CATEGORIES } from '../lib/categories'
+import { currencyChip, currencyLabel, currencySuffix } from '../lib/currencies'
+import { BASE_CURRENCY, summaryCurrency, tripCurrencies } from '../lib/tripCurrency'
 import { Pair } from '../components/Pair'
-
-function latestRate(ratesByDate: Record<string, number>): number {
-  const keys = Object.keys(ratesByDate).sort()
-  return keys.length ? ratesByDate[keys[keys.length - 1]] : 0
-}
 
 interface Draft {
   title: string
+  /** 외화 금액 (entries.cny). 어느 통화인지는 currency 가 들고 있다. */
   cny: string
   krw: string
+  currency: string
   memberId: string | null
   date: string
 }
@@ -26,7 +25,7 @@ interface Draft {
 export function HistoryTab() {
   const { trip } = useTrip()
   const { members } = useTripMembers(trip?.id)
-  const { ratesByDate } = useRates(trip?.id, trip?.code)
+  const { rates } = useRates(trip?.id, trip?.code)
   const { entries, updateEntry, removeEntry, refresh } = useEntries(trip?.id)
   const { total: budgetTotal } = useBudgets(trip?.id)
   usePolling(refresh, !!trip?.id)
@@ -37,7 +36,9 @@ export function HistoryTab() {
   const [draft, setDraft] = useState<Draft | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const totals = computeTotals(entries, members, budgetTotal, latestRate(ratesByDate))
+  const currencies = tripCurrencies(trip)
+  const summary = summaryCurrency(trip)
+  const totals = computeTotals(entries, members, budgetTotal, summary, latestRateFor(rates, summary))
   const categories = useMemo(() => CATEGORIES.map(([name]) => name).concat('기타'), [])
 
   const filtered = entries.filter((e) => {
@@ -63,6 +64,7 @@ export function HistoryTab() {
       title: e.title,
       cny: String(e.cny),
       krw: String(e.krw),
+      currency: entryCurrency(e),
       memberId: e.member_id,
       date: e.date,
     })
@@ -79,7 +81,7 @@ export function HistoryTab() {
     if (!editingId || !draft) return
     const cny = parseFloat(draft.cny) || 0
     const krw = parseFloat(draft.krw) || 0
-    const resolved = resolveAmount({ krw, cny }, draft.date, ratesByDate)
+    const resolved = resolveAmount({ krw, cny }, draft.date, draft.currency, rates)
     if (!resolved.krw && !resolved.cny) {
       setError('금액을 입력해주세요.')
       return
@@ -90,6 +92,7 @@ export function HistoryTab() {
       date: draft.date,
       krw: resolved.krw,
       cny: resolved.cny,
+      currency: draft.currency,
       rate: resolved.rate,
     })
     if (!result.ok) {
@@ -118,10 +121,10 @@ export function HistoryTab() {
     <section className="pad">
       <div className="sec first">합계</div>
       <div className="box">
-        <div className="tr"><span className="k">공금 · {totals.fund.n}건</span><span className="v"><Pair cny={totals.fund.cny} krw={totals.fund.krw} /></span></div>
-        <div className="tr"><span className="k">개인 합계</span><span className="v"><Pair cny={totals.personCny} krw={totals.personKrw} /></span></div>
+        <div className="tr"><span className="k">공금 · {totals.fund.n}건</span><span className="v"><Pair amount={totals.fund.cny} krw={totals.fund.krw} currency={summary} /></span></div>
+        <div className="tr"><span className="k">개인 합계</span><span className="v"><Pair amount={totals.personCny} krw={totals.personKrw} currency={summary} /></span></div>
         <div className="tr"><span className="k">예산 사용률</span><span className="v">{totals.pct.toFixed(1)}%</span></div>
-        <div className="tr"><span className="k">잔여 예산</span><span className="v" style={{ fontWeight: 600 }}><Pair cny={totals.remainCny} krw={totals.remain} /></span></div>
+        <div className="tr"><span className="k">잔여 예산</span><span className="v" style={{ fontWeight: 600 }}><Pair amount={totals.remainCny} krw={totals.remain} currency={summary} /></span></div>
       </div>
 
       <div className="sec">필터</div>
@@ -162,19 +165,37 @@ export function HistoryTab() {
                       onChange={(ev) => setDraft({ ...draft, title: ev.target.value })}
                     />
                   </div>
+                  {currencies.length > 1 && (
+                    <div className="chips" style={{ marginBottom: 8 }}>
+                      {currencies.map((c) => (
+                        <button
+                          key={c}
+                          className={'chip' + (draft.currency === c ? ' on' : '')}
+                          onClick={() => setDraft({ ...draft, currency: c })}
+                          title={currencyLabel(c)}
+                        >
+                          {currencyChip(c)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <div className="money">
-                    <label>
-                      <input inputMode="decimal" value={draft.cny} onChange={(ev) => setDraft({ ...draft, cny: ev.target.value })} />
-                      <span>元</span>
-                    </label>
+                    {draft.currency !== BASE_CURRENCY && (
+                      <label>
+                        <input inputMode="decimal" value={draft.cny} onChange={(ev) => setDraft({ ...draft, cny: ev.target.value })} />
+                        <span>{currencySuffix(draft.currency)}</span>
+                      </label>
+                    )}
                     <label>
                       <input inputMode="numeric" value={draft.krw} onChange={(ev) => setDraft({ ...draft, krw: ev.target.value })} />
                       <span>원</span>
                     </label>
                   </div>
-                  <p className="note" style={{ margin: '0 0 9px' }}>
-                    {impliedRate ? `적용환율 ${impliedRate.toFixed(2)} · 한쪽을 비우면 자동 환산돼요` : '한쪽만 채우면 저장할 때 환율로 자동 환산돼요'}
-                  </p>
+                  {draft.currency !== BASE_CURRENCY && (
+                    <p className="note" style={{ margin: '0 0 9px' }}>
+                      {impliedRate ? `적용환율 ${impliedRate.toFixed(2)} · 한쪽을 비우면 자동 환산돼요` : '한쪽만 채우면 저장할 때 환율로 자동 환산돼요'}
+                    </p>
+                  )}
                   <div className="chips">
                     <button className={'chip' + (draft.memberId === null ? ' on' : '')} onClick={() => setDraft({ ...draft, memberId: null })}>공금</button>
                     {members.map((m) => (
@@ -201,7 +222,7 @@ export function HistoryTab() {
                 <div className="body">
                   <div className="top">
                     <span className="name">{e.title}</span>
-                    <Pair cny={e.cny} krw={e.krw} />
+                    <Pair amount={e.cny} krw={e.krw} currency={entryCurrency(e)} />
                   </div>
                   <div className="meta">
                     {e.date.slice(5).replace('-', '/')} · {e.category} ·{' '}

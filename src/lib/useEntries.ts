@@ -20,6 +20,7 @@ export interface NewEntryInput {
   member_id: string | null
   krw: number
   cny: number
+  currency: string
   rate: number | null
   source: Entry['source']
   created_by: string | null
