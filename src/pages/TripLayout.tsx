@@ -1,9 +1,25 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useTrip } from '../context/TripContext'
+import { useTripMembers } from '../lib/useTripMembers'
+import { useRates } from '../lib/useRates'
+import { useEntries } from '../lib/useEntries'
+import { useBudgets } from '../lib/useBudgets'
+import { computeTotals } from '../lib/totals'
 import { won, yuan } from '../lib/format'
+
+function latestRate(ratesByDate: Record<string, number>): number {
+  const keys = Object.keys(ratesByDate).sort()
+  return keys.length ? ratesByDate[keys[keys.length - 1]] : 0
+}
 
 export function TripLayout() {
   const { trip } = useTrip()
+  const { members } = useTripMembers(trip?.id)
+  const { ratesByDate } = useRates(trip?.id)
+  const { entries } = useEntries(trip?.id)
+  const { total: budgetTotal } = useBudgets(trip?.id)
+
+  const totals = computeTotals(entries, members, budgetTotal, latestRate(ratesByDate))
 
   return (
     <div className="wrap">
@@ -11,11 +27,16 @@ export function TripLayout() {
         <div className="eyebrow">{trip?.code}</div>
         <h1 className="title">{trip?.name}</h1>
         <div className="remain">
-          <b>{won(0)}</b>
-          <em>{yuan(0)}</em>
-          <span>잔여 · 불러오는 중</span>
+          <b>{won(totals.remain)}</b>
+          <em>{yuan(totals.remainCny)}</em>
+          <span>잔여 · 예산 {won(totals.budget)} 중 {totals.pct.toFixed(1)}% 사용</span>
         </div>
-        <div className="gauge"><i style={{ width: '0%' }} /></div>
+        <div className="gauge">
+          <i
+            className={totals.remain < 0 ? 'over' : ''}
+            style={{ width: `${Math.min(100, Math.max(0, totals.pct))}%` }}
+          />
+        </div>
       </header>
 
       <nav className="tabs">

@@ -66,6 +66,15 @@ SPEC.md 원안은 "8~10자 랜덤 코드를 시스템이 자동 발급 + URL 링
 ### 6. 오프라인 큐 범위
 IndexedDB 큐잉 + 온라인 복귀 동기화는 **8단계에서만** 구현한다. 1~7단계는 온라인 연결을 전제로 동작해도 된다.
 
+### 6-1. 환율 계산 — 4단계(MVP) 범위 제한
+SPEC 5장의 5단계 우선순위 중 4번(외부 API 자동 조회)은 6단계(fx-rates, Edge Function) 몫이다. 4단계(mvp-record)에서는 다음만 구현한다:
+
+1. 위안·원화 둘 다 입력된 경우 → `rate = krw / cny` 역산
+2. 하나만 입력된 경우 → `rates` 테이블에 그 날짜 값이 있으면 재사용
+3. `rates`에도 없으면 → 자동 계산 불가. 저장 미리보기에서 두 금액 중 하나를 직접 채우도록 안내(둘 다 없으면 저장 차단)
+
+외부 API 조회(frankfurter.app 등)와 "조회 실패 시 최근 저장값 폴백"은 6단계에서 추가한다. 즉 4단계 시점에는 관리자가 설정 탭에서 환율을 최소 1회 수동 입력해둬야 자동 환산이 동작한다(설정 탭 환율 입력 UI는 5~6단계에서 완성, 4단계는 rates 테이블에 직접 seed하거나 두 금액을 모두 입력하는 것으로 우회 가능).
+
 ### 7. GitHub 저장소 공개 범위
 **퍼블릭 저장소**로 한다. 코드에 개인정보 없음, API 키는 `.env`로 분리되어 커밋되지 않으므로 프라이빗일 이유가 없고, Cloudflare Pages Free 연동도 더 단순해짐.
 
@@ -74,7 +83,7 @@ IndexedDB 큐잉 + 온라인 복귀 동기화는 **8단계에서만** 구현한�
 - [x] 1. scaffold
 - [x] 2. schema (trips/people/trip_members/budgets/entries/rates + RLS + create-trip Edge Function 완료, 실제 프로젝트에 적용 및 curl 검증 완료)
 - [x] 3. trip-entry (코드 입력 → 이름 입력 → localStorage 캐시 → 재방문 자동 진입 → 설정 탭 "다른 여행 코드로 전환" 모두 Playwright로 검증 완료)
-- [ ] 4. mvp-record
+- [x] 4. mvp-record (텍스트 파싱 → 편집 가능 미리보기 → 저장 → 이번 사용금액/공금외 누적/잔여예산 표시. **MVP 최소 사용 가능 지점 도달**. Playwright로 전체 흐름 검증 완료)
 - [ ] 5. history-tab
 - [ ] 6. fx-rates
 - [ ] 7. image-parsing
@@ -87,6 +96,12 @@ IndexedDB 큐잉 + 온라인 복귀 동기화는 **8단계에서만** 구현한�
 - `src/context/TripContext.tsx`: 여행 로드, 참여자 이름 등록(people upsert + trip_members insert), 코드 전환을 담당하는 단일 컨텍스트.
 - `people` 테이블은 RLS select도 열려있다(`people_select_open`, 마이그레이션 0002). 최초 등록 시 `.insert().select()`가 자기 자신을 못 읽어 401이 나는 문제를 select 정책 완화로 해결했다 — INSERT가 이미 열려있어 select만 막는 것은 실질적 보안 이득이 없다는 판단.
 - URL 라우팅은 `/t/:code`를 쓰지 않는다. 코드는 폼 입력으로만 받는다 (4-1 참고). React Router는 여행 내부 탭 전환(`/`, `/history`, `/settings`)에만 쓰인다.
+
+### 4단계에서 확정된 구현 세부사항
+- `src/lib/parser.ts`, `src/lib/categories.ts`: preview.html의 `parseLine`/`guessCat`을 그대로 이식. 멤버 이름은 하드코딩 대신 `useTripMembers`로 조회한 활성 멤버 목록을 파라미터로 받는다.
+- `src/lib/rates.ts`의 `resolveAmount`: 6-1에서 정한 대로 위안·원화 둘 다 입력 시 역산, 하나만 있으면 `rates` 캐시 조회까지만 하고 외부 API 호출은 하지 않는다. 캐시에도 없으면 `rate: null`을 반환하고 저장을 막는다.
+- 데이터 접근은 `useTripMembers`/`useRates`/`useEntries`/`useBudgets` 훅으로 분리했다. 각자 `tripId`를 받아 독립적으로 조회하고, 화면(`RecordTab`, `TripLayout`)에서 조합해서 쓴다. `TripContext`는 세션(코드/이름/멤버 신원)만 담당하고 지출 데이터는 갖지 않는다.
+- `src/lib/totals.ts`의 `computeTotals`: preview.html의 `totals()` 함수를 그대로 이식. 공금은 `member_id === null`인 entries, 개인 결제는 `trip_members.id` 기준으로 집계.
 
 ## 작업 순서 (커밋 단위)
 
