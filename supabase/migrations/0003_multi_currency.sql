@@ -31,3 +31,23 @@ alter table public.rates drop constraint if exists rates_pkey;
 alter table public.rates add primary key (trip_id, date, currency);
 
 comment on column public.rates.rate is '1 currency 당 원화.';
+
+-- ------------------------------------------------------------
+-- 옛 fetch-rate 가 남긴 잘못된 환율 정리
+--
+-- 이전 fetch-rate 는 여행 통화와 무관하게 `from=CNY` 로 하드코딩돼 있었다.
+-- 그래서 위안을 쓰지 않는 여행에도 위안 환율이 저장됐다 (실제로 대만(TWD)
+-- 여행에 205 짜리 위안 환율 두 건이 들어가 있었다. 실제 TWD 는 약 43 이다).
+--
+-- 위에서 currency 기본값을 'CNY' 로 채우면 그 행들이 "위안 환율"로 굳는다.
+-- 그 여행이 쓰지 않는 통화의 환율은 애초에 틀린 값이므로 지운다.
+-- rates 는 날짜별 조회 캐시일 뿐 다른 테이블이 참조하지 않아 지워도 안전하고,
+-- 필요하면 설정 탭에서 다시 조회하면 된다.
+--
+-- 새 DB 에 처음부터 적용하면 해당 행이 없어 아무것도 지우지 않는다.
+-- ------------------------------------------------------------
+delete from public.rates r
+using public.trips t
+where t.id = r.trip_id
+  and r.currency <> all (t.spend_currencies)
+  and r.currency <> 'KRW';
