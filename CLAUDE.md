@@ -69,11 +69,30 @@ IndexedDB 큐잉 + 온라인 복귀 동기화는 **8단계에서만** 구현한�
 ### 7. GitHub 저장소 공개 범위
 **퍼블릭 저장소**로 한다. 코드에 개인정보 없음, API 키는 `.env`로 분리되어 커밋되지 않으므로 프라이빗일 이유가 없고, Cloudflare Pages Free 연동도 더 단순해짐.
 
+## 진행 상황
+
+- [x] 1. scaffold
+- [x] 2. schema (trips/people/trip_members/budgets/entries/rates + RLS + create-trip Edge Function 완료, 실제 프로젝트에 적용 및 curl 검증 완료)
+- [x] 3. trip-entry (코드 입력 → 이름 입력 → localStorage 캐시 → 재방문 자동 진입 → 설정 탭 "다른 여행 코드로 전환" 모두 Playwright로 검증 완료)
+- [ ] 4. mvp-record
+- [ ] 5. history-tab
+- [ ] 6. fx-rates
+- [ ] 7. image-parsing
+- [ ] 8. pwa-offline
+- [ ] 9. share-target
+- [ ] 10. deploy
+
+### 3단계에서 확정된 구현 세부사항
+- `src/lib/supabase.ts`: `setTripCode()`로 모듈 레벨 변수를 갱신하면 `global.fetch` 래퍼가 매 요청에 `x-trip-code` 헤더를 붙인다.
+- `src/context/TripContext.tsx`: 여행 로드, 참여자 이름 등록(people upsert + trip_members insert), 코드 전환을 담당하는 단일 컨텍스트.
+- `people` 테이블은 RLS select도 열려있다(`people_select_open`, 마이그레이션 0002). 최초 등록 시 `.insert().select()`가 자기 자신을 못 읽어 401이 나는 문제를 select 정책 완화로 해결했다 — INSERT가 이미 열려있어 select만 막는 것은 실질적 보안 이득이 없다는 판단.
+- URL 라우팅은 `/t/:code`를 쓰지 않는다. 코드는 폼 입력으로만 받는다 (4-1 참고). React Router는 여행 내부 탭 전환(`/`, `/history`, `/settings`)에만 쓰인다.
+
 ## 작업 순서 (커밋 단위)
 
-1. **scaffold** — Vite+React+TS, 디자인 토큰/폰트 이식, 라우팅 스켈레톤(`/t/:code`)
-2. **schema** — Supabase 마이그레이션(trips/people/trip_members/budgets/entries/rates), RLS, 시드 — *Supabase 프로젝트 필요*
-3. **trip-entry** — 여행 코드 진입, localStorage, 참여자 선택("누구세요")
+1. **scaffold** — Vite+React+TS, 디자인 토큰/폰트 이식, 라우팅 스켈레톤
+2. **schema** — Supabase 마이그레이션(trips/people/trip_members/budgets/entries/rates), RLS, create-trip Edge Function — *Supabase 프로젝트 필요*
+3. **trip-entry** — 여행 코드 진입, localStorage, 참여자 이름 직접 입력
 4. **mvp-record** — 정규식 텍스트 파서 + 편집 가능 미리보기 + 저장 (**MVP 최소 사용 가능 지점**)
 5. **history-tab** — 내역 탭, 인라인 편집, 필터
 6. **fx-rates** — 환율 우선순위 로직 + Edge Function 외부 API 조회 + 캐시
