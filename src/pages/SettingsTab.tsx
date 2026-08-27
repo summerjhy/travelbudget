@@ -7,6 +7,8 @@ import { won } from '../lib/format'
 import { currencyLabel } from '../lib/currencies'
 import { foreignCurrencies } from '../lib/tripCurrency'
 import { THEMES, applyTheme, getStoredTheme, setStoredTheme, type ThemeCode } from '../lib/themes'
+import { useEntries } from '../lib/useEntries'
+import { ExportPanel } from '../components/ExportPanel'
 
 function todayDate(): string {
   return new Date().toISOString().slice(0, 10)
@@ -14,9 +16,10 @@ function todayDate(): string {
 
 export function SettingsTab() {
   const { trip, personName, member, switchTrip, renameMe } = useTrip()
-  const { members, refresh: refreshMembers, addMember, deactivateMember } = useTripMembers(trip?.id)
+  const { members, allMembers, refresh: refreshMembers, addMember, deactivateMember } = useTripMembers(trip?.id)
   const { rates, setManualRate, fetchNow } = useRates(trip?.id, trip?.code)
   const { budgets, total, addBudget, removeBudget } = useBudgets(trip?.id)
+  const { entries } = useEntries(trip?.id)
 
   const [addAmount, setAddAmount] = useState('')
   const [addMemo, setAddMemo] = useState('')
@@ -221,6 +224,13 @@ export function SettingsTab() {
       )}
 
       {error && <p className="err">{error}</p>}
+
+      <div className="sec">📤 내역 내보내기</div>
+      {trip && (
+        <div className="box" style={{ padding: 14, marginBottom: 10 }}>
+          <ExportPanel trip={trip} members={allMembers} entries={entries} />
+        </div>
+      )}
 
       <div className="sec">✈️ 여행 정보</div>
       <div className="box">

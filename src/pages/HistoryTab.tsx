@@ -12,6 +12,7 @@ import { currencyChip, currencyLabel, currencySuffix } from '../lib/currencies'
 import { BASE_CURRENCY, summaryCurrency, tripCurrencies } from '../lib/tripCurrency'
 import { PAYMENT_METHODS, paymentLabel } from '../lib/payment'
 import { Pair } from '../components/Pair'
+import { ExportPanel } from '../components/ExportPanel'
 
 interface Draft {
   title: string
@@ -40,6 +41,7 @@ export function HistoryTab() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draft, setDraft] = useState<Draft | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [showExport, setShowExport] = useState(false)
 
   const currencies = tripCurrencies(trip)
   const summary = summaryCurrency(trip)
@@ -196,7 +198,25 @@ export function HistoryTab() {
         </div>
       </div>
 
-      <div className="sec">🧾 전체 내역 · {filtered.length}건</div>
+      <div className="sec">
+        🧾 전체 내역 · {filtered.length}건
+        <button
+          className="act"
+          style={{ marginLeft: 'auto' }}
+          onClick={() => setShowExport((v) => !v)}
+          aria-expanded={showExport}
+        >
+          {showExport ? '닫기' : '📤 내보내기'}
+        </button>
+      </div>
+      {showExport && trip && (
+        <div className="box" style={{ padding: 14, marginBottom: 10 }}>
+          <p className="note" style={{ marginBottom: 9 }}>
+            지금 걸린 필터가 적용된 {filtered.length}건에서 날짜를 골라 내보내요.
+          </p>
+          <ExportPanel trip={trip} members={allMembers} entries={filtered} />
+        </div>
+      )}
       <p className="note" style={{ margin: '-4px 0 10px' }}>항목을 누르면 이름 · 금액 · 날짜를 고칠 수 있어요.</p>
 
       {error && <p className="err">{error}</p>}
