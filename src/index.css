@@ -1,14 +1,66 @@
-@import url('https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&display=swap');
 
-:root {
+/* ------------------------------ 테마 토큰 ------------------------------
+   --jade 는 이름만 옥색이고 실제 뜻은 "이 테마의 강조색"이다.
+   이름을 유지해서 컴포넌트 CSS 를 건드리지 않고 테마를 갈아끼운다.
+   --accent-soft / --accent-ink 는 강조색 위에 얹는 옅은 배경과 글자색.
+   ---------------------------------------------------------------- */
+:root,
+:root[data-theme="green"] {
   --paper: #EDEFE7;
   --card: #F8F9F3;
   --ink: #1B2620;
   --soft: #5B6A61;
   --jade: #2A6B5C;
+  --accent-on: #F1F4EE;
+  --accent-soft: #D6EAE2;
+  --accent-ink: #12362D;
   --marigold: #C98A1E;
   --rose: #A4505E;
   --line: rgba(27, 38, 32, .13);
+  --shadow: rgba(42, 107, 92, .13);
+}
+:root[data-theme="blue"] {
+  --paper: #E8EDF1;
+  --card: #F7FAFC;
+  --ink: #16232C;
+  --soft: #54666F;
+  --jade: #2C5F7C;
+  --accent-on: #F0F6F9;
+  --accent-soft: #D2E4EE;
+  --accent-ink: #11313F;
+  --marigold: #C08A2C;
+  --rose: #A2555F;
+  --line: rgba(22, 35, 44, .13);
+  --shadow: rgba(44, 95, 124, .14);
+}
+:root[data-theme="beige"] {
+  --paper: #F1EAE2;
+  --card: #FCF8F4;
+  --ink: #241E18;
+  --soft: #6B5C4C;
+  --jade: #8A6D4F;
+  --accent-on: #FDF9F5;
+  --accent-soft: #EADCCB;
+  --accent-ink: #3F3123;
+  --marigold: #B5822A;
+  --rose: #A05B58;
+  --line: rgba(36, 30, 24, .13);
+  --shadow: rgba(138, 109, 79, .15);
+}
+:root[data-theme="pink"] {
+  --paper: #F6E9EC;
+  --card: #FDF7F8;
+  --ink: #2A1B20;
+  --soft: #6E5560;
+  --jade: #B5657F;
+  --accent-on: #FFF6F8;
+  --accent-soft: #F4D9E1;
+  --accent-ink: #5A2739;
+  --marigold: #C08A3C;
+  --rose: #A84A63;
+  --line: rgba(42, 27, 32, .13);
+  --shadow: rgba(181, 101, 127, .15);
 }
 
 *, *::before, *::after {
@@ -54,82 +106,104 @@ input, select, textarea {
 .wrap {
   max-width: 560px;
   margin: 0 auto;
-  padding-bottom: 44px;
+  /* 하단 고정 네비 높이 + 홈 인디케이터 */
+  padding-bottom: calc(78px + env(safe-area-inset-bottom));
 }
 
 /* ------------------------------ 헤더 ------------------------------ */
 .head {
   background: var(--jade);
-  color: #F1F4EE;
-  padding: 20px 20px 18px;
+  color: var(--accent-on);
+  padding: 16px 17px 17px;
   position: relative;
   overflow: hidden;
+  border-radius: 20px;
+  margin: 14px 15px 0;
 }
+/* 오른쪽 위 장식 원 */
 .head::after {
   content: '';
   position: absolute;
-  left: 0; right: 0; bottom: 0;
-  height: 6px;
-  background: repeating-linear-gradient(90deg, #F1F4EE 0 7px, transparent 7px 14px);
-  opacity: .45;
+  right: -34px;
+  top: -40px;
+  width: 132px;
+  height: 132px;
+  background: rgba(255, 255, 255, .11);
+  border-radius: 50%;
+}
+.headrow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  position: relative;
 }
 .eyebrow {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 10.5px;
-  letter-spacing: .22em;
-  text-transform: uppercase;
-  opacity: .72;
+  letter-spacing: .04em;
+  opacity: .82;
+  line-height: 1.5;
+  white-space: nowrap;
 }
 .title {
-  font-family: 'Gowun Batang', serif;
-  font-weight: 700;
-  font-size: 25px;
-  margin: 4px 0 0;
+  font-weight: 600;
+  font-size: 14.5px;
+  letter-spacing: -.01em;
+  line-height: 1.5;
+  margin: 0;
   background: none;
   border: none;
   padding: 0;
-  width: 100%;
-  color: #F1F4EE;
+  color: var(--accent-on);
 }
 .remain {
   display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin-top: 13px;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 7px 0 4px;
   flex-wrap: wrap;
+  position: relative;
+  line-height: 1.45;
 }
 .remain b {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 27px;
-  font-weight: 500;
+  font-size: 25px;
+  font-weight: 600;
   letter-spacing: -.02em;
   font-variant-numeric: tabular-nums;
 }
 .remain em {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 20px;
-  font-weight: 400;
+  font-size: 13px;
+  font-weight: 500;
   font-style: normal;
-  opacity: .8;
+  opacity: .85;
   font-variant-numeric: tabular-nums;
+  line-height: 1.5;
 }
 .remain span {
-  font-size: 11.5px;
-  opacity: .78;
+  font-size: 11px;
+  opacity: .9;
   width: 100%;
+  display: flex;
+  justify-content: space-between;
+  line-height: 1.6;
 }
 .gauge {
-  height: 5px;
-  border-radius: 3px;
-  background: rgba(241, 244, 238, .25);
-  margin-top: 10px;
+  height: 7px;
+  border-radius: 99px;
+  background: rgba(0, 0, 0, .26);
+  margin-top: 7px;
   overflow: hidden;
+  position: relative;
 }
 .gauge i {
   display: block;
   height: 100%;
-  background: #F1F4EE;
-  border-radius: 3px;
+  background: var(--accent-soft);
+  border-radius: 99px;
+  min-width: 7px;
   transition: width .5s ease;
 }
 .gauge i.over {
@@ -137,32 +211,60 @@ input, select, textarea {
 }
 
 /* ------------------------------ 탭 ------------------------------ */
+/* 하단 고정 네비게이션 */
 .tabs {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
   display: flex;
-  padding: 12px 20px 0;
+  justify-content: space-around;
+  gap: 4px;
+  max-width: 560px;
+  margin: 0 auto;
+  background: var(--card);
+  border-top: 1px solid var(--line);
+  padding: 8px 10px calc(11px + env(safe-area-inset-bottom));
+  box-shadow: 0 -5px 22px -10px var(--shadow);
 }
 .tab {
   flex: 1;
-  padding: 10px 4px;
-  font-size: 13.5px;
-  font-weight: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 7px 4px;
+  border-radius: 13px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .02em;
   color: var(--soft);
-  border-bottom: 2px solid transparent;
+  text-decoration: none;
+  line-height: 1.5;
+}
+.tab .ico {
+  font-size: 19px;
+  line-height: 1;
 }
 .tab.on {
-  color: var(--ink);
-  border-bottom-color: var(--marigold);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
 }
 .pad {
   padding: 16px 20px 0;
 }
 .sec {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 10.5px;
-  letter-spacing: .18em;
-  text-transform: uppercase;
+  font-family: 'IBM Plex Sans KR', system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .01em;
+  line-height: 1.7;
   color: var(--soft);
-  margin: 24px 0 9px;
+  margin: 22px 0 9px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 .sec.first {
   margin-top: 2px;
@@ -170,6 +272,7 @@ input, select, textarea {
 
 /* ------------------------------ 박스 / 행 ------------------------------ */
 .box {
+  box-shadow: 0 2px 10px -4px var(--shadow);
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 11px;
@@ -233,9 +336,9 @@ input, select, textarea {
   width: 100%;
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 11px;
+  border-radius: 14px;
   padding: 13px;
-  min-height: 104px;
+  min-height: 128px;
   resize: vertical;
   line-height: 1.65;
 }
@@ -243,7 +346,7 @@ input, select, textarea {
   width: 100%;
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: 11px;
   padding: 11px 12px;
 }
 .num {
@@ -266,10 +369,11 @@ input, select, textarea {
 }
 .lab {
   display: block;
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'IBM Plex Sans KR', system-ui, sans-serif;
   font-size: 10.5px;
-  letter-spacing: .16em;
-  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: .01em;
+  line-height: 1.7;
   color: var(--soft);
   margin-bottom: 6px;
 }
@@ -284,8 +388,10 @@ input, select, textarea {
 /* ------------------------------ 버튼 ------------------------------ */
 .btn {
   background: var(--jade);
-  color: #F1F4EE;
-  border-radius: 10px;
+  color: var(--accent-on);
+  border-radius: 12px;
+  box-shadow: 0 2px 9px -4px var(--shadow);
+  line-height: 1.6;
   padding: 13px 16px;
   font-size: 14.5px;
   font-weight: 500;
@@ -335,6 +441,12 @@ input, select, textarea {
   color: var(--soft);
 }
 .chip.on {
+  background: var(--jade);
+  border-color: var(--jade);
+  color: var(--accent-on);
+}
+/* 공금 칩은 사람이 아니라 '공동' 이라는 다른 축이라 잉크색으로 구분한다 */
+.chip.fund.on {
   background: var(--ink);
   border-color: var(--ink);
   color: var(--paper);
@@ -389,7 +501,8 @@ input, select, textarea {
 .prev {
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 16px;
+  box-shadow: 0 2px 10px -4px var(--shadow);
   padding: 11px 12px;
   margin-bottom: 8px;
 }
@@ -530,4 +643,125 @@ input, select, textarea {
     animation: none;
     transition: none;
   }
+}
+
+/* ------------------------------ 입력 방식 전환 ------------------------------ */
+.segmented {
+  display: flex;
+  gap: 5px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 4px;
+}
+.segmented button {
+  flex: 1;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--soft);
+  padding: 8px 6px;
+  border-radius: 9px;
+  line-height: 1.6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+.segmented button.on {
+  background: var(--jade);
+  color: var(--accent-on);
+  box-shadow: 0 1px 5px -2px var(--shadow);
+}
+
+/* ------------------------------ 필터 (두 축 구분) ------------------------------ */
+.filters {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 2px 10px -4px var(--shadow);
+  overflow: hidden;
+}
+.fgroup {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+}
+.fgroup + .fgroup {
+  border-top: 1px solid var(--line);
+}
+.fgroup .flab {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--soft);
+  letter-spacing: .06em;
+  line-height: 1.7;
+  white-space: nowrap;
+}
+.fgroup .chips {
+  gap: 4px;
+}
+.fgroup .chip {
+  padding: 4px 9px;
+  font-size: 11.5px;
+  border-radius: 8px;
+  line-height: 1.6;
+}
+
+/* ------------------------------ 참여자 행 액션 ------------------------------ */
+.act {
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--soft);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+.act.mine {
+  border-color: var(--jade);
+  color: var(--jade);
+}
+.act.warn {
+  border-color: rgba(164, 80, 94, .4);
+  color: var(--rose);
+}
+
+/* ------------------------------ 테마 고르기 ------------------------------ */
+.dots {
+  display: flex;
+  gap: 13px;
+  padding: 4px 2px;
+}
+.dot {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  position: relative;
+}
+.dot i {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: block;
+  border: 1px solid rgba(0, 0, 0, .16);
+}
+.dot[aria-pressed="true"] {
+  border-color: var(--jade);
+}
+.dot[aria-pressed="true"]::after {
+  content: '';
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent-on);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .12);
 }

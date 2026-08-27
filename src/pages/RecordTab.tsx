@@ -58,6 +58,8 @@ export function RecordTab() {
   const [currency, setCurrencyState] = useState<string | null>(null)
   const [payment, setPaymentState] = useState<string | null>(null)
   const [payer, setPayerState] = useState<string | null>(null)
+  // 입력 방식. 사진/텍스트를 한 행 토글로 고른다.
+  const [mode, setMode] = useState<'photo' | 'text'>('text')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const memberNames = members.map((m) => m.personName)
@@ -303,17 +305,46 @@ export function RecordTab() {
         style={{ display: 'none' }}
         onChange={handlePhotoSelect}
       />
-      <button className="btn" onClick={() => fileInputRef.current?.click()} disabled={parsingImages || !online}>
-        {parsingImages ? <><span className="spin" />분석 중...</> : online ? '사진으로 읽어들이기' : '사진 인식은 온라인에서만 가능해요'}
-      </button>
-      <p className="note" style={{ margin: '9px 0' }}>
-        카드사 앱의 해외결제 상세내역 캡쳐를 올리면 자동으로 읽어요. 최대 5장.
-        결제 캡쳐는 분석 후 즉시 폐기되고 서버에 저장되지 않아요.
-      </p>
+      <div className="segmented" role="tablist" aria-label="입력 방식">
+        <button
+          role="tab"
+          aria-selected={mode === 'photo'}
+          className={mode === 'photo' ? 'on' : ''}
+          onClick={() => setMode('photo')}
+        >
+          <span aria-hidden="true">📸</span> 사진으로
+        </button>
+        <button
+          role="tab"
+          aria-selected={mode === 'text'}
+          className={mode === 'text' ? 'on' : ''}
+          onClick={() => setMode('text')}
+        >
+          <span aria-hidden="true">📝</span> 텍스트로
+        </button>
+      </div>
 
+      {mode === 'photo' && (
+        <>
+          <button
+            className="btn"
+            style={{ marginTop: 9 }}
+            onClick={() => fileInputRef.current?.click()}
+            disabled={parsingImages || !online}
+          >
+            {parsingImages ? <><span className="spin" />분석 중...</> : online ? '📸 사진 고르기' : '사진 인식은 온라인에서만 가능해요'}
+          </button>
+          <p className="note" style={{ margin: '9px 0' }}>
+            카드사 앱의 해외결제 상세내역 캡쳐를 올리면 자동으로 읽어요. 최대 5장.
+            결제 캡쳐는 분석 후 즉시 폐기되고 서버에 저장되지 않아요.
+          </p>
+        </>
+      )}
+
+      <div className="prev" style={{ marginTop: 9 }}>
       {showCurrencyPicker && (
-        <div style={{ marginBottom: 8 }}>
-          <label className="lab">입력 단위</label>
+        <div style={{ marginBottom: 11 }}>
+          <label className="lab">💱 입력 단위</label>
           <div className="chips">
             {currencies.map((c) => (
               <button
@@ -329,8 +360,8 @@ export function RecordTab() {
         </div>
       )}
 
-      <div style={{ marginBottom: 8 }}>
-        <label className="lab">결제 수단</label>
+      <div style={{ marginBottom: members.length > 0 ? 11 : 0 }}>
+        <label className="lab">💳 결제 수단</label>
         <div className="chips">
           {PAYMENT_METHODS.map((m) => (
             <button
@@ -345,8 +376,8 @@ export function RecordTab() {
       </div>
 
       {members.length > 0 && (
-        <div style={{ marginBottom: 8 }}>
-          <label className="lab">결제자</label>
+        <div>
+          <label className="lab">🙋 결제자</label>
           <div className="chips">
             {members.map((m) => (
               <button
@@ -361,8 +392,13 @@ export function RecordTab() {
         </div>
       )}
 
+      </div>
+
+      {mode === 'text' && (
+      <>
       <textarea
         className="ta"
+        style={{ marginTop: 9 }}
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder={'쓴 만큼 한 줄씩 적으세요.\n\n훠궈 380\n택시 45 소영\n마사지 198 혜연\n숙소 240000원'}
@@ -376,10 +412,12 @@ export function RecordTab() {
         단위를 안 적은 숫자는 <b>{currencyName(activeCurrency)}</b>({activeCurrency})로 읽어요.
         {' '}<b>원</b>{currencies.length > 2 ? ' 처럼 단위를 적으면' : '을 붙이면'} 그 단위로 들어가요.
       </p>
+      </>
+      )}
 
       {preview.length > 0 && (
         <div>
-          <div className="sec">확인하고 저장</div>
+          <div className="sec">✅ 확인하고 저장</div>
           {preview.map((p, i) => {
             const itemRate = latestRateFor(rates, p.currency)
             const other =
@@ -424,7 +462,7 @@ export function RecordTab() {
                 </div>
                 <div className="chips" style={{ marginTop: 7 }}>
                   <button
-                    className={'chip' + (p.memberId === null ? ' on' : '')}
+                    className={'chip fund' + (p.memberId === null ? ' on' : '')}
                     onClick={() => updatePreviewItem(i, { memberId: null, personName: null })}
                   >
                     공금
@@ -452,7 +490,7 @@ export function RecordTab() {
 
       {lastSaved && lastSaved.length > 0 && (
         <div>
-          <div className="sec">이번 사용금액</div>
+          <div className="sec">🧾 이번 사용금액</div>
           {lastSaved.map((e) => (
             <div className="box" style={{ marginBottom: 8 }} key={e.id}>
               <div className="tr"><span className="k">이름</span><span className="v txt">{e.title}</span></div>
@@ -479,7 +517,7 @@ export function RecordTab() {
         </div>
       )}
 
-      <div className="sec">공금 외 지출내역 (누적)</div>
+      <div className="sec">👤 공금 외 지출내역 (누적)</div>
       <div className="box">
         {members.map((m) => (
           <div className="tr" key={m.id}>
@@ -489,7 +527,7 @@ export function RecordTab() {
         ))}
       </div>
 
-      <div className="sec">잔여 예산</div>
+      <div className="sec">💰 잔여 예산</div>
       <div className="box">
         <div className="tr"><span className="k">예산 총액</span><span className="v">{won(totals.budget)}</span></div>
         <div className="tr"><span className="k">공금 사용</span><span className="v"><Pair amount={totals.fund.cny} krw={totals.fund.krw} currency={summary} /></span></div>
