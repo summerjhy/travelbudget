@@ -32,6 +32,9 @@ export function SettingsTab() {
   const [editingName, setEditingName] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
   const [emojiDraft, setEmojiDraft] = useState('')
+  // 남의 이모지를 고치는 중인 참여자 id. 이름과 달리 이모지는 누구 것이든 바꿀 수 있다
+  // — trip_members 에만 있어서 다른 여행에 영향이 없고, 알아보기 쉬우라고 붙이는 표식이다.
+  const [emojiEditId, setEmojiEditId] = useState<string | null>(null)
   const [memberError, setMemberError] = useState<string | null>(null)
   const [theme, setTheme] = useState<ThemeCode>(getStoredTheme)
 
@@ -45,6 +48,16 @@ export function SettingsTab() {
     setTheme(next)
     applyTheme(next)
     setStoredTheme(next)
+  }
+
+  async function handleSaveOtherEmoji(memberId: string) {
+    setMemberError(null)
+    const result = await setMemberEmoji(memberId, emojiDraft)
+    if (!result.ok) {
+      setMemberError(result.error ?? '이모지 저장에 실패했어요.')
+      return
+    }
+    setEmojiEditId(null)
   }
 
   async function handleAddMember() {
@@ -155,6 +168,21 @@ export function SettingsTab() {
               </div>
             )
           }
+          if (!isMe && emojiEditId === m.id) {
+            return (
+              <div key={m.id} style={{ padding: '12px 14px', borderBottom: '1px solid var(--line)' }}>
+                <EmojiPicker
+                  value={emojiDraft}
+                  onChange={setEmojiDraft}
+                  label={`${m.personName} 님의 이모지`}
+                />
+                <div className="editrow" style={{ marginTop: 0 }}>
+                  <button className="btn quiet sm" style={{ flex: '0 0 34%' }} onClick={() => setEmojiEditId(null)}>취소</button>
+                  <button className="btn sm" onClick={() => handleSaveOtherEmoji(m.id)}>저장</button>
+                </div>
+              </div>
+            )
+          }
           return (
             <div className="tr" key={m.id}>
               <span className="k">
@@ -165,7 +193,16 @@ export function SettingsTab() {
                 {isMe ? (
                   <button className="act mine" onClick={() => { setNameDraft(m.personName); setEmojiDraft(m.emoji); setEditingName(true); setMemberError(null) }}>내 이름 바꾸기</button>
                 ) : (
-                  <button className="act warn" onClick={() => handleDeactivate(m.id, m.displayName)}>빼기</button>
+                  <>
+                    <button
+                      className="act"
+                      style={{ marginRight: 5 }}
+                      onClick={() => { setEmojiDraft(m.emoji); setEmojiEditId(m.id); setEditingName(false); setMemberError(null) }}
+                    >
+                      이모지
+                    </button>
+                    <button className="act warn" onClick={() => handleDeactivate(m.id, m.displayName)}>빼기</button>
+                  </>
                 )}
               </span>
             </div>
@@ -279,15 +316,6 @@ export function SettingsTab() {
         </div>
       )}
 
-      <div className="sec">🔄 다른 여행</div>
-      <button className="btn quiet" onClick={switchTrip}>다른 여행으로 이동하기</button>
-      <p className="note" style={{ marginTop: 9 }}>
-        이 버튼을 클릭하면 초기 화면으로 돌아가서 다른 여행에 참여할 수 있어요.
-        다른 여행의 코드를 알고 있어야 참여할 수 있고, 지금 이 여행의 코드(<b>{trip?.code}</b>)를
-        다시 입력하면 이 여행으로 돌아올 수 있어요.
-      </p>
-
-
       {/* ───────── 사용 꿀팁 (기본 접힘) ───────── */}
       </div>
 
@@ -361,6 +389,16 @@ export function SettingsTab() {
       <div className="gbox">
       <div className="sec">📮 함께 쓰기</div>
       {trip && <ShareTripButton trip={trip} />}
+      </div>
+
+      <div className="gbox">
+      <div className="sec">🔄 다른 여행</div>
+      <button className="btn quiet" onClick={switchTrip}>다른 여행으로 이동하기</button>
+      <p className="note" style={{ marginTop: 9 }}>
+        이 버튼을 클릭하면 초기 화면으로 돌아가서 다른 여행에 참여할 수 있어요.
+        다른 여행의 코드를 알고 있어야 참여할 수 있고, 지금 이 여행의 코드(<b>{trip?.code}</b>)를
+        다시 입력하면 이 여행으로 돌아올 수 있어요.
+      </p>
       </div>
       <div style={{ height: 30 }} />
     </section>

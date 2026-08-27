@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useTrip } from '../context/TripContext'
 import { ADMIN_GATE_CODE } from '../lib/adminTrips'
 
-export function CodeGate({ onCreateTrip, onAdmin }: { onCreateTrip: () => void; onAdmin: () => void }) {
+export function CodeGate({ onAdmin }: { onAdmin: () => void }) {
   const { connectTrip, error: contextError } = useTrip()
   const [code, setCode] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -61,9 +61,9 @@ export function CodeGate({ onCreateTrip, onAdmin }: { onCreateTrip: () => void; 
         <button
           className="btn quiet sm"
           style={{ width: 'auto', marginTop: 24, padding: '6px 10px' }}
-          onClick={onCreateTrip}
+          onClick={onAdmin}
         >
-          관리자이신가요? 새 여행 만들기
+          관리자이신가요?
         </button>
       </div>
     </div>
