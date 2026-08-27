@@ -89,6 +89,16 @@ export function HistoryTab() {
       list.push(e)
       map.set(e.date, list)
     }
+    // 하루 안에서는 늦게 쓴 것부터, 위에서 아래로 시간 역순. time이 없는
+    // 옛 기록(마이그레이션 0011 이전)은 언제인지 몰라 맨 아래로 몰아 둔다.
+    for (const list of map.values()) {
+      list.sort((a, b) => {
+        if (a.time && b.time) return a.time < b.time ? 1 : a.time > b.time ? -1 : 0
+        if (a.time) return -1
+        if (b.time) return 1
+        return a.created_at < b.created_at ? 1 : -1
+      })
+    }
     return Array.from(map.entries()).sort((a, b) => (a[0] < b[0] ? 1 : -1))
   }, [filtered])
 
