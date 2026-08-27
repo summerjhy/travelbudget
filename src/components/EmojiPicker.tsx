@@ -57,7 +57,7 @@ export function EmojiPicker({
           value={isCustom ? value : ''}
           placeholder="직접 입력 (키보드 이모지)"
           onChange={(e) => onChange(pickFirstEmoji(e.target.value))}
-          style={{ flex: 1, fontSize: 15 }}
+          style={{ flex: 1, fontSize: 16 }}
         />
         <span className="note" style={{ flex: '0 0 auto' }}>
           {value ? <span className="mname-emoji">{value}</span> : '없음'}

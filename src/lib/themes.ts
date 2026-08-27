@@ -49,4 +49,16 @@ export function setStoredTheme(theme: ThemeCode) {
 /** <html data-theme="..."> 로 심는다. CSS 가 이 속성으로 토큰을 갈아끼운다. */
 export function applyTheme(theme: ThemeCode) {
   document.documentElement.dataset.theme = theme
+
+  // 안드로이드 상태표시줄 색. index.html 의 theme-color 는 고정값이라
+  // 테마를 바꿔도 그대로 남는다 — 여기서 같이 갈아끼운다.
+  const swatch = THEMES.find((t) => t.code === theme)?.swatch
+  if (!swatch) return
+  let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+  if (!meta) {
+    meta = document.createElement('meta')
+    meta.name = 'theme-color'
+    document.head.appendChild(meta)
+  }
+  meta.content = swatch
 }

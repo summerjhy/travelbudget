@@ -135,7 +135,7 @@ export function ExportPanel({ trip, members, entries }: Props) {
           readOnly
           value={fallbackText}
           onFocus={(e) => e.currentTarget.select()}
-          style={{ marginTop: 9, minHeight: 160, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12 }}
+          style={{ marginTop: 9, minHeight: 160, fontFamily: "'IBM Plex Mono', monospace", fontSize: 13.5 }}
         />
       )}
     </>
