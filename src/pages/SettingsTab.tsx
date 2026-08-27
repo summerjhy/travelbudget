@@ -318,8 +318,8 @@ export function SettingsTab() {
               앱을 고르면 캡쳐 → 공유만으로 자동 분석까지 끝나요.
             </p>
             <p className="note" style={{ margin: '9px 0 0' }}>
-              목록에 안 보이면 홈 화면 아이콘을 지우고 다시 설치해주세요.
-              공유 기능은 설치할 때 등록돼요.
+              목록에 여행가계부 앱이 보이지 않는 경우, <b>더보기</b>를 눌러 애플리케이션 중
+              여행가계부 앱을 추가한 뒤 다시 시도해주세요.
             </p>
         </Collapsible>
       </Collapsible>
