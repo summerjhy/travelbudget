@@ -7,7 +7,7 @@ import { useBudgets } from '../lib/useBudgets'
 import { useOfflineSync } from '../lib/useOfflineSync'
 import { usePolling } from '../lib/usePolling'
 import { parseText, parserConfig, type ParsedEntry } from '../lib/parser'
-import { CATEGORY_NAMES, guessCategory } from '../lib/categories'
+import { CATEGORY_NAMES, categoryChip, guessCategory } from '../lib/categories'
 import { latestRateFor, rateFor, resolveAmount, type RateTable } from '../lib/rates'
 import { computeTotals, entryCurrency } from '../lib/totals'
 import { foreign, won } from '../lib/format'
@@ -21,14 +21,14 @@ import {
   setStoredPayer,
   setStoredPayment,
 } from '../lib/session'
-import { DEFAULT_PAYMENT_METHOD, PAYMENT_METHODS, isPaymentMethod, paymentLabel } from '../lib/payment'
+import { DEFAULT_PAYMENT_METHOD, PAYMENT_METHODS, isPaymentMethod, paymentChip } from '../lib/payment'
 import { resizeAndCompressMany } from '../lib/imageResize'
 import { parseImages } from '../lib/parseImage'
 import { consumeSharedFiles, takeShareFlag } from '../lib/shareTarget'
 import { Pair } from '../components/Pair'
 import { MemberName } from '../components/MemberName'
 import type { Entry } from '../lib/types'
-import { todayForTrip, yearForTrip } from '../lib/tripDate'
+import { nowForTrip, todayForTrip, yearForTrip } from '../lib/tripDate'
 
 interface PreviewItem extends ParsedEntry {
   memberId: string | null
@@ -252,6 +252,8 @@ export function RecordTab() {
       }
     }
 
+    // 한 번의 저장 동작 안에서는 다 같이 지금 입력한 것이므로 시각도 하나로 맞춘다.
+    const time = nowForTrip(trip)
     const items: NewEntryInput[] = []
     for (const p of saved) {
       const date = p.date ?? todayForTrip(trip)
@@ -277,6 +279,7 @@ export function RecordTab() {
         rate: resolved.rate,
         source: p.entrySource,
         created_by: personName,
+        time,
       })
     }
 
@@ -377,7 +380,7 @@ export function RecordTab() {
               className={'chip' + (activePayment === m.code ? ' on' : '')}
               onClick={() => pickPayment(m.code)}
             >
-              {m.label}
+              {paymentChip(m.code)}
             </button>
           ))}
         </div>
@@ -464,7 +467,7 @@ export function RecordTab() {
                       className={'chip' + (p.category === c ? ' on' : '')}
                       onClick={() => updatePreviewItem(i, { category: c })}
                     >
-                      {c}
+                      {categoryChip(c)}
                     </button>
                   ))}
                 </div>
@@ -475,7 +478,7 @@ export function RecordTab() {
                       className={'chip' + (p.paymentMethod === m.code ? ' on' : '')}
                       onClick={() => updatePreviewItem(i, { paymentMethod: m.code })}
                     >
-                      {m.label}
+                      {paymentChip(m.code)}
                     </button>
                   ))}
                 </div>
@@ -513,8 +516,8 @@ export function RecordTab() {
           {lastSaved.map((e) => (
             <div className="box" style={{ marginBottom: 8 }} key={e.id}>
               <div className="tr"><span className="k">이름</span><span className="v txt">{e.title}</span></div>
-              <div className="tr"><span className="k">일자</span><span className="v">{e.date}</span></div>
-              <div className="tr"><span className="k">결제수단</span><span className="v txt">{paymentLabel(e.payment_method)}</span></div>
+              <div className="tr"><span className="k">일자</span><span className="v">{e.date}{e.time ? ` · ${e.time}` : ''}</span></div>
+              <div className="tr"><span className="k">결제수단</span><span className="v txt">{paymentChip(e.payment_method)}</span></div>
               <div className="tr"><span className="k">원화</span><span className="v">{won(e.krw)}</span></div>
               {entryCurrency(e) !== BASE_CURRENCY && (
                 <div className="tr">

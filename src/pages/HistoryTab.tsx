@@ -7,10 +7,10 @@ import { useBudgets } from '../lib/useBudgets'
 import { usePolling } from '../lib/usePolling'
 import { latestRateFor, rateFor, resolveAmount } from '../lib/rates'
 import { computeTotals, entryCurrency } from '../lib/totals'
-import { CATEGORIES, CATEGORY_NAMES } from '../lib/categories'
+import { CATEGORIES, CATEGORY_NAMES, categoryChip } from '../lib/categories'
 import { currencyChip, currencyLabel, currencySuffix } from '../lib/currencies'
 import { BASE_CURRENCY, summaryCurrency, tripCurrencies } from '../lib/tripCurrency'
-import { PAYMENT_METHODS, paymentLabel } from '../lib/payment'
+import { PAYMENT_METHODS, paymentChip } from '../lib/payment'
 import { won } from '../lib/format'
 import { Pair } from '../components/Pair'
 import { ExportPanel } from '../components/ExportPanel'
@@ -30,6 +30,8 @@ interface Draft {
   /** 비어 있으면 저장할 때 금액에서 다시 계산한다. */
   rate: string
   date: string
+  /** HH:MM. 빈 문자열이면 시각 없이 저장한다(옛 기록 등). */
+  time: string
 }
 
 export function HistoryTab() {
@@ -87,6 +89,16 @@ export function HistoryTab() {
       list.push(e)
       map.set(e.date, list)
     }
+    // 하루 안에서는 늦게 쓴 것부터, 위에서 아래로 시간 역순. time이 없는
+    // 옛 기록(마이그레이션 0011 이전)은 언제인지 몰라 맨 아래로 몰아 둔다.
+    for (const list of map.values()) {
+      list.sort((a, b) => {
+        if (a.time && b.time) return a.time < b.time ? 1 : a.time > b.time ? -1 : 0
+        if (a.time) return -1
+        if (b.time) return 1
+        return a.created_at < b.created_at ? 1 : -1
+      })
+    }
     return Array.from(map.entries()).sort((a, b) => (a[0] < b[0] ? 1 : -1))
   }, [filtered])
 
@@ -103,6 +115,7 @@ export function HistoryTab() {
       paymentMethod: e.payment_method ?? 'cash',
       rate: e.rate === null ? '' : String(e.rate),
       date: e.date,
+      time: e.time ?? '',
     })
     setError(null)
   }
@@ -132,6 +145,7 @@ export function HistoryTab() {
       paid_by: draft.paidBy,
       payment_method: draft.paymentMethod,
       date: draft.date,
+      time: draft.time || null,
       krw: useTyped ? Math.round(resolved.cny * typedRate) : resolved.krw,
       cny: resolved.cny,
       currency: draft.currency,
@@ -209,7 +223,7 @@ export function HistoryTab() {
           <div className="chips">
             <button className={'chip' + (categoryFilter === null ? ' on' : '')} onClick={() => setCategoryFilter(null)}>전체</button>
             {categories.map((c) => (
-              <button key={c} className={'chip' + (categoryFilter === c ? ' on' : '')} onClick={() => setCategoryFilter(c)}>{c}</button>
+              <button key={c} className={'chip' + (categoryFilter === c ? ' on' : '')} onClick={() => setCategoryFilter(c)}>{categoryChip(c)}</button>
             ))}
           </div>
         </div>
@@ -324,7 +338,13 @@ export function HistoryTab() {
                           />
                           <span>원/{draft.currency}</span>
                         </label>
-                        <button className="btn ghost sm" onClick={recalcRate}>이 날짜 환율로</button>
+                        <button
+                          className="btn ghost sm"
+                          style={{ width: 'auto', flexShrink: 0 }}
+                          onClick={recalcRate}
+                        >
+                          이 날짜 환율로
+                        </button>
                       </div>
                       <p className="note" style={{ margin: '0 0 9px' }}>
                         {impliedRate
@@ -340,7 +360,7 @@ export function HistoryTab() {
                         className={'chip' + (draft.category === c ? ' on' : '')}
                         onClick={() => setDraft({ ...draft, category: c })}
                       >
-                        {c}
+                        {categoryChip(c)}
                       </button>
                     ))}
                   </div>
@@ -351,7 +371,7 @@ export function HistoryTab() {
                         className={'chip' + (draft.paymentMethod === m.code ? ' on' : '')}
                         onClick={() => setDraft({ ...draft, paymentMethod: m.code })}
                       >
-                        {m.label}
+                        {paymentChip(m.code)}
                       </button>
                     ))}
                   </div>
@@ -367,16 +387,18 @@ export function HistoryTab() {
                       </button>
                     ))}
                   </div>
-                  <div className="chips">
+                  <div className="chips" style={{ marginBottom: 8 }}>
+                    <span className="note" style={{ marginRight: 4 }}>비용 구분</span>
                     <button className={'chip fund' + (draft.memberId === null ? ' on' : '')} onClick={() => setDraft({ ...draft, memberId: null })}>공금</button>
                     {members.map((m) => (
                       <button key={m.id} className={'chip' + (draft.memberId === m.id ? ' on' : '')} onClick={() => setDraft({ ...draft, memberId: m.id })}>
-                        <MemberName emoji={m.emoji} name={m.personName} />
+                        {m.personName}
                       </button>
                     ))}
                   </div>
                   <div className="editrow">
                     <input className="inp" type="date" value={draft.date} onChange={(ev) => setDraft({ ...draft, date: ev.target.value })} style={{ flex: 1 }} />
+                    <input className="inp" type="time" value={draft.time} onChange={(ev) => setDraft({ ...draft, time: ev.target.value })} style={{ flex: '0 0 40%' }} />
                   </div>
                   <div className="editrow">
                     <button className="btn warn sm" style={{ flex: '0 0 26%' }} onClick={deleteEntry}>삭제</button>
@@ -406,15 +428,15 @@ export function HistoryTab() {
                     <Pair amount={e.cny} krw={e.krw} currency={entryCurrency(e)} />
                   </div>
                   <div className="meta">
-                    {e.date.slice(5).replace('-', '/')} · {e.category} ·{' '}
+                    {e.date.slice(5).replace('-', '/')}{e.time ? ` ${e.time}` : ''} · {categoryChip(e.category)} ·{' '}
                     <span style={{ color: e.member_id ? 'var(--marigold)' : 'var(--jade)' }}>
                       {e.member_id
                         ? owner
-                          ? <MemberName emoji={owner.emoji} name={owner.personName} />
+                          ? owner.personName
                           : '개인'
                         : '공금'}
                     </span>
-                    {' · '}{paymentLabel(e.payment_method)}
+                    {' · '}{paymentChip(e.payment_method)}
                     {payer && <> · 결제 <MemberName emoji={payer.emoji} name={payer.personName} /></>}
                     {shownRate && <> · {shownRate}</>}
                     {e.pending && <span style={{ color: 'var(--marigold)' }}> · 동기화 대기중</span>}

@@ -8,6 +8,7 @@ import { usePolling } from '../lib/usePolling'
 import { computeTotals } from '../lib/totals'
 import { latestRateFor } from '../lib/rates'
 import { summaryCurrency, foreignCurrencies } from '../lib/tripCurrency'
+import { categoryChip } from '../lib/categories'
 import { won } from '../lib/format'
 import { Pair } from '../components/Pair'
 import { useTripNames } from '../lib/useTripNames'
@@ -71,7 +72,7 @@ export function HomeTab() {
       if (e.member_id !== null) continue
       map.set(e.category, (map.get(e.category) ?? 0) + Number(e.krw))
     }
-    return [...map.entries()].map(([label, amount]) => ({ label, amount }))
+    return [...map.entries()].map(([label, amount]) => ({ label: categoryChip(label), amount }))
   }, [entries])
 
   if (!trip) return null

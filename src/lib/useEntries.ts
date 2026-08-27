@@ -26,6 +26,7 @@ export interface NewEntryInput {
   paid_by: string | null
   source: Entry['source']
   created_by: string | null
+  time: string | null
 }
 
 export interface PendingEntry extends Entry {

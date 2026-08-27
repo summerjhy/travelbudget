@@ -29,7 +29,7 @@ function cell(v: string | number | null | undefined): string {
 const BOM = '\uFEFF'
 
 const CSV_HEADER = [
-  '날짜', '내역', '분류', '공금/개인', '결제자', '결제수단',
+  '날짜', '시간', '내역', '분류', '공금/개인', '결제자', '결제수단',
   '외화금액', '통화', '원화금액', '적용환율',
 ]
 
@@ -45,6 +45,7 @@ export function toCsv(entries: ExportRow[], ctx: Ctx): string {
     const cur = entryCurrency(e)
     lines.push([
       cell(e.date),
+      cell(e.time ?? ''),
       cell(e.title),
       cell(e.category),
       cell(e.member_id ? '개인' : '공금'),
