@@ -92,7 +92,7 @@ export function HomeTab() {
         )}
         <div className="tr">
           <span className="k">함께</span>
-          <span className="v txt">{members.map((m) => m.personName).join(' · ') || '나 혼자'}</span>
+          <span className="v txt">{members.map((m) => m.displayName).join(' · ') || '나 혼자'}</span>
         </div>
         {foreignCurrencies(trip).length > 0 && (
           <div className="tr">
@@ -131,7 +131,7 @@ export function HomeTab() {
         {members.map((m) => (
           <div className="tr" key={m.id}>
             <span className="k">
-              {m.personName}
+              {m.displayName}
               {m.personName === personName && <span className="badge" style={{ marginLeft: 5 }}>나</span>}
             </span>
             <span className="v">

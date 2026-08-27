@@ -1073,3 +1073,30 @@ input, select, textarea {
 .collapse .collapse:last-child {
   margin-bottom: 0;
 }
+
+/* ------------------------------ 이모지 고르기 ------------------------------ */
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 5px;
+}
+.emoji-cell {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  line-height: 1;
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 9px;
+  color: var(--soft);
+  padding: 0;
+}
+.emoji-cell.on {
+  border-color: var(--jade);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1px var(--jade) inset;
+}
+@media (max-width: 380px) {
+  .emoji-grid { grid-template-columns: repeat(6, 1fr); }
+}

@@ -224,7 +224,7 @@ export function HistoryTab() {
           <div className="chips">
             <button className={'chip' + (payerFilter === 'ALL' ? ' on' : '')} onClick={() => setPayerFilter('ALL')}>전체</button>
             {members.map((m) => (
-              <button key={m.id} className={'chip' + (payerFilter === m.id ? ' on' : '')} onClick={() => setPayerFilter(m.id)}>{m.personName}</button>
+              <button key={m.id} className={'chip' + (payerFilter === m.id ? ' on' : '')} onClick={() => setPayerFilter(m.id)}>{m.displayName}</button>
             ))}
           </div>
         </div>
@@ -362,7 +362,7 @@ export function HistoryTab() {
                         className={'chip' + (draft.paidBy === m.id ? ' on' : '')}
                         onClick={() => setDraft({ ...draft, paidBy: draft.paidBy === m.id ? null : m.id })}
                       >
-                        {m.personName}
+                        {m.displayName}
                       </button>
                     ))}
                   </div>
@@ -370,7 +370,7 @@ export function HistoryTab() {
                     <button className={'chip fund' + (draft.memberId === null ? ' on' : '')} onClick={() => setDraft({ ...draft, memberId: null })}>공금</button>
                     {members.map((m) => (
                       <button key={m.id} className={'chip' + (draft.memberId === m.id ? ' on' : '')} onClick={() => setDraft({ ...draft, memberId: m.id })}>
-                        {m.personName}
+                        {m.displayName}
                       </button>
                     ))}
                   </div>
@@ -387,12 +387,12 @@ export function HistoryTab() {
             }
 
             const memberName = e.member_id
-              ? allMembers.find((m) => m.id === e.member_id)?.personName ?? '개인'
+              ? allMembers.find((m) => m.id === e.member_id)?.displayName ?? '개인'
               : '공금'
             // 결제자가 회계 귀속(member_id)과 다를 때만 따로 적는다. 같으면 중복이다.
             const payerName =
               e.paid_by && e.paid_by !== e.member_id
-                ? allMembers.find((m) => m.id === e.paid_by)?.personName ?? null
+                ? allMembers.find((m) => m.id === e.paid_by)?.displayName ?? null
                 : null
             // 원화 건은 환산이 없으므로 환율을 보여줄 게 없다.
             const shownRate =

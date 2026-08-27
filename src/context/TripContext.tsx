@@ -18,7 +18,7 @@ interface TripContextValue {
   member: TripMember | null
   connectTrip: (code: string) => Promise<{ ok: boolean; error?: string }>
   switchTrip: () => void
-  setPersonName: (name: string) => Promise<{ ok: boolean; error?: string }>
+  setPersonName: (name: string, emoji?: string) => Promise<{ ok: boolean; error?: string }>
   renameMe: (name: string) => Promise<{ ok: boolean; error?: string }>
 }
 
@@ -51,7 +51,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
     return { ok: true }
   }
 
-  async function loadMember(tripId: string, name: string): Promise<TripMember | null> {
+  async function loadMember(tripId: string, name: string, emoji = ''): Promise<TripMember | null> {
     const { data: existingPeople } = await supabase
       .from('people')
       .select('*')
@@ -86,7 +86,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
 
     const { data: newMember, error: memberError } = await supabase
       .from('trip_members')
-      .insert({ trip_id: tripId, person_id: personId })
+      .insert({ trip_id: tripId, person_id: personId, emoji })
       .select()
       .single()
 
@@ -118,12 +118,16 @@ export function TripProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // 재방문(localStorage 에 이름만 있고 member 가 없을 때) 신원을 되찾는 용도다.
+  // setPersonName 이 이미 member 를 넣어준 직후에는 돌면 안 된다 — 그러면
+  // 이모지 없이 trip_members 를 한 번 더 만들어 방금 고른 이모지를 덮어쓴다.
   useEffect(() => {
-    if (!trip || !personName) return
+    if (!trip || !personName || member) return
     loadMember(trip.id, personName).then((m) => {
       if (m) setMember(m)
     })
-  }, [trip, personName])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trip, personName, member])
 
   async function connectTrip(code: string) {
     setError(null)
@@ -143,13 +147,13 @@ export function TripProvider({ children }: { children: ReactNode }) {
     setError(null)
   }
 
-  async function setPersonName(name: string) {
+  async function setPersonName(name: string, emoji = '') {
     if (!trip) return { ok: false, error: '여행 정보가 없어요.' }
     const v = validateName(name)
     if (!v.ok) return v
     const trimmed = v.name
 
-    const m = await loadMember(trip.id, trimmed)
+    const m = await loadMember(trip.id, trimmed, emoji)
     if (!m) return { ok: false, error: '등록에 실패했어요. 다시 시도해주세요.' }
 
     setMember(m)

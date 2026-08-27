@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Budget, Trip } from '../lib/types'
-import { currencyChip, currencyLabel, currencyName } from '../lib/currencies'
+import { currencyChip, currencyLabel } from '../lib/currencies'
 import { BASE_CURRENCY, tripCurrencies } from '../lib/tripCurrency'
 import { foreign, won } from '../lib/format'
 import type { RateTable } from '../lib/rates'
@@ -219,7 +219,7 @@ export function BudgetPanel({
 
       <p className="note" style={{ marginTop: 9 }}>
         여행 중에 공금을 더 걷으면 여기에 추가하세요.
-        {currencies.length > 1 && ` 트래블카드에 ${currencyName(currencies[0])}로 환전해뒀다면 그 금액과 환율을 그대로 적으면 돼요.`}
+        {currencies.length > 1 && ' 트래블카드에 여행 국가의 화폐를 미리 환전해뒀다면 그 금액과 환율을 그대로 적으면 돼요.'}
         {' '}통화를 섞어 넣어도 예산은 원화 하나로 합쳐서 계산해요.
       </p>
     </>

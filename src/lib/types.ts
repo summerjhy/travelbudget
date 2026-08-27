@@ -22,6 +22,8 @@ export interface TripMember {
   id: string
   trip_id: string
   person_id: string
+  /** 이름 앞에 붙는 이모지. 안 골랐으면 빈 문자열. */
+  emoji: string
   active: boolean
   sort: number
   created_at: string
