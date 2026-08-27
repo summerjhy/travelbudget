@@ -11,6 +11,7 @@ import { CATEGORIES, CATEGORY_NAMES } from '../lib/categories'
 import { currencyChip, currencyLabel, currencySuffix } from '../lib/currencies'
 import { BASE_CURRENCY, summaryCurrency, tripCurrencies } from '../lib/tripCurrency'
 import { PAYMENT_METHODS, paymentLabel } from '../lib/payment'
+import { won } from '../lib/format'
 import { Pair } from '../components/Pair'
 import { ExportPanel } from '../components/ExportPanel'
 import { Help } from '../components/Help'
@@ -47,6 +48,25 @@ export function HistoryTab() {
   const [draft, setDraft] = useState<Draft | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showExport, setShowExport] = useState(false)
+  // 기본은 '최근 2일만 펼침'이고, 사용자가 누른 것만 예외로 기억한다.
+  // 날짜 목록이 필터에 따라 바뀌므로 열린 목록을 통째로 들고 있으면 어긋난다.
+  const [openDates, setOpenDates] = useState<Set<string>>(new Set())
+  const [closedDates, setClosedDates] = useState<Set<string>>(new Set())
+
+  function toggleDate(date: string, isOpen: boolean) {
+    setOpenDates((prev) => {
+      const next = new Set(prev)
+      if (isOpen) next.delete(date)
+      else next.add(date)
+      return next
+    })
+    setClosedDates((prev) => {
+      const next = new Set(prev)
+      if (isOpen) next.add(date)
+      else next.delete(date)
+      return next
+    })
+  }
 
   const currencies = tripCurrencies(trip)
   const summary = summaryCurrency(trip)
@@ -237,10 +257,24 @@ export function HistoryTab() {
         <div className="empty">아직 기록이 없어요.<br />기록 탭에서 첫 지출을 남겨보세요.</div>
       )}
 
-      {groups.map(([date, items]) => (
+      {groups.map(([date, items], gi) => {
+        // 최근 두 날짜는 펼쳐둔다 — 여행 중에 자주 보는 건 오늘·어제다.
+        // 그 외에는 접어서 긴 여행에서도 목록이 한눈에 들어오게 한다.
+        const open = closedDates.has(date) ? false : openDates.has(date) || gi < 2
+        const dayKrw = items.reduce((s, e) => s + Number(e.krw), 0)
+        return (
         <div key={date}>
-          <div className="sec">{date.slice(5).replace('-', '/')}</div>
-          {items.map((e) => {
+          <button
+            type="button"
+            className="daygroup"
+            aria-expanded={open}
+            onClick={() => toggleDate(date, open)}
+          >
+            <span className="d">{date.slice(5).replace('-', '/')}</span>
+            <span className="n">{items.length}건 · {won(dayKrw)}</span>
+            <span className="mark" aria-hidden="true">{open ? '−' : '+'}</span>
+          </button>
+          {open && items.map((e) => {
             if (e.id === editingId && draft) {
               return (
                 <div className="prev edit" key={e.id}>
@@ -386,7 +420,8 @@ export function HistoryTab() {
             )
           })}
         </div>
-      ))}
+        )
+      })}
       <div style={{ height: 30 }} />
     </section>
   )
