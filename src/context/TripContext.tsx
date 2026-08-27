@@ -9,6 +9,7 @@ import {
 } from '../lib/session'
 import type { Trip, TripMember } from '../lib/types'
 import { validateName } from '../lib/useTripMembers'
+import { notifyJoin } from '../lib/push'
 
 interface TripContextValue {
   loading: boolean
@@ -91,6 +92,13 @@ export function TripProvider({ children }: { children: ReactNode }) {
       .single()
 
     if (memberError || !newMember) return null
+
+    // 여기까지 왔다는 건 이 여행에 처음 들어온 사람이라는 뜻이다 — 이미
+    // 있는 참여자는 위에서 return tm 으로 빠져나간다. 관리자 폰에 알린다.
+    // 실패해도 참여는 성공이므로 기다리지 않는다.
+    const code = getStoredTripCode()
+    if (code) notifyJoin(code, newMember.id)
+
     return newMember
   }
 

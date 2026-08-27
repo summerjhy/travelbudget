@@ -10,6 +10,7 @@ import { useEntries } from '../lib/useEntries'
 import { ExportPanel } from '../components/ExportPanel'
 import { BudgetPanel } from '../components/BudgetPanel'
 import { ShareTripButton } from '../components/ShareTripButton'
+import { PushPanel } from '../components/PushPanel'
 import { Collapsible } from '../components/Collapsible'
 import { EmojiPicker } from '../components/EmojiPicker'
 import { MemberName } from '../components/MemberName'
@@ -389,6 +390,9 @@ export function SettingsTab() {
       <div className="gbox">
       <div className="sec">📮 함께 쓰기</div>
       {trip && <ShareTripButton trip={trip} />}
+      <Collapsible title="🔔 관리자 알림 받기">
+        <PushPanel />
+      </Collapsible>
       </div>
 
       <div className="gbox">
