@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { useTrip } from '../context/TripContext'
+import { ADMIN_GATE_CODE } from '../lib/adminTrips'
 
-export function CodeGate({ onCreateTrip }: { onCreateTrip: () => void }) {
+export function CodeGate({ onCreateTrip, onAdmin }: { onCreateTrip: () => void; onAdmin: () => void }) {
   const { connectTrip, error: contextError } = useTrip()
   const [code, setCode] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -11,6 +12,11 @@ export function CodeGate({ onCreateTrip }: { onCreateTrip: () => void }) {
     e.preventDefault()
     if (!/^\d{8}$/.test(code)) {
       setError('숫자 8자리를 입력해주세요.')
+      return
+    }
+    // 여행 코드가 아니라 관리자 화면으로 가는 통로.
+    if (code === ADMIN_GATE_CODE) {
+      onAdmin()
       return
     }
     setSubmitting(true)

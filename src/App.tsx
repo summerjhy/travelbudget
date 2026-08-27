@@ -3,6 +3,7 @@ import { Route, Routes } from 'react-router-dom'
 import { TripProvider, useTrip } from './context/TripContext'
 import { CodeGate } from './pages/CodeGate'
 import { CreateTripForm } from './pages/CreateTripForm'
+import { AdminConsole } from './pages/AdminConsole'
 import { NameGate } from './pages/NameGate'
 import { TripLayout } from './pages/TripLayout'
 import { HomeTab } from './pages/HomeTab'
@@ -13,6 +14,7 @@ import { SettingsTab } from './pages/SettingsTab'
 function Gate() {
   const { loading, trip, personName, connectTrip } = useTrip()
   const [showCreateForm, setShowCreateForm] = useState(false)
+  const [showAdmin, setShowAdmin] = useState(false)
 
   if (loading) {
     return (
@@ -25,18 +27,22 @@ function Gate() {
   }
 
   if (!trip) {
+    if (showAdmin && !showCreateForm) {
+      return <AdminConsole onBack={() => setShowAdmin(false)} onCreateTrip={() => setShowCreateForm(true)} />
+    }
     if (showCreateForm) {
       return (
         <CreateTripForm
           onBack={() => setShowCreateForm(false)}
           onCreated={(code) => {
             setShowCreateForm(false)
+            setShowAdmin(false)
             connectTrip(code)
           }}
         />
       )
     }
-    return <CodeGate onCreateTrip={() => setShowCreateForm(true)} />
+    return <CodeGate onCreateTrip={() => setShowCreateForm(true)} onAdmin={() => setShowAdmin(true)} />
   }
   if (!personName) return <NameGate />
 
