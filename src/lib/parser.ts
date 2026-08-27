@@ -70,6 +70,19 @@ export function parserConfig(currencies: string[], defaultCurrency: string): Par
   return { unitMap, defaultCurrency }
 }
 
+/**
+ * 배수 표기. "180만" -> 1,800,000, "3만엔" -> 30000 JPY 처럼 읽는다.
+ * 통화와 무관하게 붙으므로 외화에도 그대로 적용된다.
+ *
+ * 억은 일부러 넣지 않는다. 여행 지출에 억 단위가 나올 일은 없는데,
+ * "1억뷰 카페" 처럼 숫자+억 으로 시작하는 상호명이 오히려 흔해서
+ * 得보다 失이 크다.
+ */
+const SCALES: [string, number][] = [
+  ['만', 10000],
+  ['천', 1000],
+]
+
 function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
@@ -79,7 +92,9 @@ function amountRe(config: ParserConfig): RegExp {
     .sort((a, b) => b.length - a.length) // 긴 표기부터. 'nt$' 가 '$' 에 먹히면 안 된다
     .map(escapeRe)
     .join('|')
-  return new RegExp(`(\\d[\\d,]*(?:\\.\\d+)?)\\s*(${units})?`, 'i')
+  const scales = SCALES.map(([w]) => w).join('|')
+  // 숫자 - (배수) - (통화 단위). "180만원" 처럼 배수와 단위가 같이 올 수 있다.
+  return new RegExp(`(\\d[\\d,]*(?:\\.\\d+)?)\\s*(${scales})?\\s*(${units})?`, 'i')
 }
 
 const DATE_RE = /(?:^|\s)(\d{1,2})[/.\-](\d{1,2})(?=\s)/
@@ -112,9 +127,12 @@ export function parseLine(
 
   const am = s.match(amountRe(config))
   if (!am) return null
-  const amount = parseFloat(am[1].replace(/,/g, ''))
-  if (!(amount > 0)) return null
-  const unit = (am[2] || '').toLowerCase()
+  const base = parseFloat(am[1].replace(/,/g, ''))
+  if (!(base > 0)) return null
+  const scale = SCALES.find(([w]) => w === am[2])?.[1] ?? 1
+  // 1.5만 같은 소수 배수도 자연스럽게 떨어지도록 반올림한다.
+  const amount = scale === 1 ? base : Math.round(base * scale)
+  const unit = (am[3] || '').toLowerCase()
   const currency = unit ? config.unitMap.get(unit) ?? config.defaultCurrency : config.defaultCurrency
   s = s.replace(am[0], ' ')
 
