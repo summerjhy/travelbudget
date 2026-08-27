@@ -28,6 +28,7 @@ export function SettingsTab() {
   const [rateBusy, setRateBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [newMemberName, setNewMemberName] = useState('')
+  const [newMemberEmoji, setNewMemberEmoji] = useState('')
   const [editingName, setEditingName] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
   const [emojiDraft, setEmojiDraft] = useState('')
@@ -48,9 +49,13 @@ export function SettingsTab() {
 
   async function handleAddMember() {
     setMemberError(null)
-    const result = await addMember(newMemberName)
-    if (result.ok) setNewMemberName('')
-    else setMemberError(result.error ?? '참여자 추가에 실패했어요.')
+    const result = await addMember(newMemberName, newMemberEmoji)
+    if (result.ok) {
+      setNewMemberName('')
+      setNewMemberEmoji('')
+    } else {
+      setMemberError(result.error ?? '참여자 추가에 실패했어요.')
+    }
   }
 
   async function handleSaveMyName() {
@@ -178,6 +183,16 @@ export function SettingsTab() {
         />
         <button className="btn ghost" style={{ flex: '0 0 80px' }} onClick={handleAddMember}>추가</button>
       </div>
+
+      {/* 이모지 칸 32개가 늘 펼쳐져 있으면 자리만 먹는다. 이름을 적기 시작하면 보여준다. */}
+      {newMemberName.trim() && (
+        <div style={{ marginTop: 9 }}>
+          <EmojiPicker value={newMemberEmoji} onChange={setNewMemberEmoji} label="이 사람을 표현하는 이모지 (선택)" />
+          <p className="note" style={{ marginTop: -4 }}>
+            이렇게 보여요 — <MemberName emoji={newMemberEmoji} name={newMemberName.trim()} />
+          </p>
+        </div>
+      )}
       {memberError && <p className="err">{memberError}</p>}
       <p className="note" style={{ marginTop: 9 }}>
         이름은 본인의 것만 수정 가능해요. 접속할 때 매번 같은 이름을 입력해야
