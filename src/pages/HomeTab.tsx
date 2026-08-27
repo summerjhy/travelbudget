@@ -185,7 +185,7 @@ export function HomeTab() {
         </div>
       )}
       <p className="note" style={{ marginTop: 9 }}>
-        만들어진 여행 이름만 보여요. 들어가려면 그 여행의 참여 코드가 필요해요.
+        만들어진 여행 이름만 보여요. 들어가려면 설정 탭 &gt; 맨 하단의 <b>다른 여행 코드로 전환</b>을 눌러주세요.
       </p>
       <div style={{ height: 20 }} />
     </section>
