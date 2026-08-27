@@ -7,15 +7,17 @@ import { useBudgets } from '../lib/useBudgets'
 import { usePolling } from '../lib/usePolling'
 import { latestRateFor, rateFor, resolveAmount } from '../lib/rates'
 import { computeTotals, entryCurrency } from '../lib/totals'
-import { CATEGORIES } from '../lib/categories'
+import { CATEGORIES, CATEGORY_NAMES } from '../lib/categories'
 import { currencyChip, currencyLabel, currencySuffix } from '../lib/currencies'
 import { BASE_CURRENCY, summaryCurrency, tripCurrencies } from '../lib/tripCurrency'
 import { PAYMENT_METHODS, paymentLabel } from '../lib/payment'
 import { Pair } from '../components/Pair'
 import { ExportPanel } from '../components/ExportPanel'
+import { Help } from '../components/Help'
 
 interface Draft {
   title: string
+  category: string
   /** 외화 금액 (entries.cny). 어느 통화인지는 currency 가 들고 있다. */
   cny: string
   krw: string
@@ -37,7 +39,10 @@ export function HistoryTab() {
   usePolling(refresh, !!trip?.id)
 
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
-  const [memberFilter, setMemberFilter] = useState<string | null | 'ALL'>('ALL')
+  // 결제자(entries.paid_by) 필터. 돈의 소유가 아니다 —
+  // 공금인지 아닌지는 각 항목 meta 에 이미 적혀 있고, 여기서는
+  // "누가 카드를 긁었나" 만 고른다. 공금인데 혜연이 결제한 건도 잡힌다.
+  const [payerFilter, setPayerFilter] = useState<string | 'ALL'>('ALL')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draft, setDraft] = useState<Draft | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -50,9 +55,8 @@ export function HistoryTab() {
 
   const filtered = entries.filter((e) => {
     if (categoryFilter && e.category !== categoryFilter) return false
-    if (memberFilter === 'ALL') return true
-    if (memberFilter === null) return e.member_id === null
-    return e.member_id === memberFilter
+    if (payerFilter === 'ALL') return true
+    return e.paid_by === payerFilter
   })
 
   const groups = useMemo(() => {
@@ -72,6 +76,7 @@ export function HistoryTab() {
       cny: String(e.cny),
       krw: String(e.krw),
       currency: entryCurrency(e),
+      category: e.category,
       memberId: e.member_id,
       paidBy: e.paid_by,
       paymentMethod: e.payment_method ?? 'cash',
@@ -101,6 +106,7 @@ export function HistoryTab() {
     const useTyped = draft.currency !== BASE_CURRENCY && typedRate > 0 && resolved.cny > 0
     const result = await updateEntry(editingId, {
       title: draft.title,
+      category: draft.category,
       member_id: draft.memberId,
       paid_by: draft.paidBy,
       payment_method: draft.paymentMethod,
@@ -187,12 +193,18 @@ export function HistoryTab() {
           </div>
         </div>
         <div className="fgroup">
-          <span className="flab">누가</span>
+          <span className="flab" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            결제
+            <Help label="결제 필터 설명">
+              <b>누가 카드를 긁었는지</b>로 걸러요.<br />
+              돈이 공금인지 아닌지는 따로예요 — 공금인데 혜연이 결제한 건도
+              혜연으로 잡혀요. 각 항목에 <b>공금 / 이름</b>이 적혀 있으니 거기서 구분하세요.
+            </Help>
+          </span>
           <div className="chips">
-            <button className={'chip' + (memberFilter === 'ALL' ? ' on' : '')} onClick={() => setMemberFilter('ALL')}>전체</button>
-            <button className={'chip fund' + (memberFilter === null ? ' on' : '')} onClick={() => setMemberFilter(null)}>공금</button>
+            <button className={'chip' + (payerFilter === 'ALL' ? ' on' : '')} onClick={() => setPayerFilter('ALL')}>전체</button>
             {members.map((m) => (
-              <button key={m.id} className={'chip' + (memberFilter === m.id ? ' on' : '')} onClick={() => setMemberFilter(m.id)}>{m.personName}</button>
+              <button key={m.id} className={'chip' + (payerFilter === m.id ? ' on' : '')} onClick={() => setPayerFilter(m.id)}>{m.personName}</button>
             ))}
           </div>
         </div>
@@ -286,6 +298,17 @@ export function HistoryTab() {
                       </p>
                     </>
                   )}
+                  <div className="chips" style={{ marginBottom: 8 }}>
+                    {CATEGORY_NAMES.map((c) => (
+                      <button
+                        key={c}
+                        className={'chip' + (draft.category === c ? ' on' : '')}
+                        onClick={() => setDraft({ ...draft, category: c })}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
                   <div className="chips" style={{ marginBottom: 8 }}>
                     {PAYMENT_METHODS.map((m) => (
                       <button
