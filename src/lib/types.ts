@@ -30,7 +30,14 @@ export interface Budget {
   id: string
   trip_id: string
   date: string
+  /** 원화 환산액. 합계·잔여는 항상 이 값으로 낸다. */
   amount: number
+  /** 입력할 때 쓴 통화. 예전 행과 원화 입력은 KRW. */
+  currency: string
+  /** 입력한 그대로의 외화 금액. 원화로 넣었으면 null. */
+  original_amount: number | null
+  /** 환전 시점 환율(1 currency 당 원화). 시세가 변해도 이 값으로 고정된다. */
+  rate: number | null
   memo: string | null
   created_at: string
 }
