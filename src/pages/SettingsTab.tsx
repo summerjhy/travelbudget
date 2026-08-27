@@ -9,6 +9,7 @@ import { THEMES, applyTheme, getStoredTheme, setStoredTheme, type ThemeCode } fr
 import { useEntries } from '../lib/useEntries'
 import { ExportPanel } from '../components/ExportPanel'
 import { BudgetPanel } from '../components/BudgetPanel'
+import { ShareTripButton } from '../components/ShareTripButton'
 
 function todayDate(): string {
   return new Date().toISOString().slice(0, 10)
@@ -300,6 +301,9 @@ export function SettingsTab() {
       <p className="note" style={{ marginTop: 9 }}>
         새 코드를 입력하면 그 여행으로 이동해요. 지금 코드를 다시 입력하면 이 여행으로 돌아올 수 있어요.
       </p>
+
+      <div className="sec">📮 함께 쓰기</div>
+      {trip && <ShareTripButton trip={trip} />}
       <div style={{ height: 30 }} />
     </section>
   )
