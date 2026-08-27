@@ -93,7 +93,7 @@ button {
 
 input, select, textarea {
   font-family: inherit;
-  font-size: 16px;
+  font-size: 16.5px;
   color: var(--ink);
 }
 
@@ -140,7 +140,7 @@ input, select, textarea {
 }
 .eyebrow {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 10.5px;
+  font-size: 12.5px;
   letter-spacing: .04em;
   opacity: .82;
   line-height: 1.5;
@@ -148,7 +148,7 @@ input, select, textarea {
 }
 .title {
   font-weight: 600;
-  font-size: 14.5px;
+  font-size: 15.5px;
   letter-spacing: -.01em;
   line-height: 1.5;
   margin: 0;
@@ -168,14 +168,14 @@ input, select, textarea {
 }
 .remain b {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 25px;
+  font-size: 26px;
   font-weight: 600;
   letter-spacing: -.02em;
   font-variant-numeric: tabular-nums;
 }
 .remain em {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 13px;
+  font-size: 14.5px;
   font-weight: 500;
   font-style: normal;
   opacity: .85;
@@ -183,7 +183,7 @@ input, select, textarea {
   line-height: 1.5;
 }
 .remain span {
-  font-size: 11px;
+  font-size: 13px;
   opacity: .9;
   width: 100%;
   display: flex;
@@ -236,7 +236,7 @@ input, select, textarea {
   gap: 3px;
   padding: 7px 4px;
   border-radius: 13px;
-  font-size: 10.5px;
+  font-size: 12.5px;
   font-weight: 600;
   letter-spacing: .02em;
   color: var(--soft);
@@ -244,7 +244,7 @@ input, select, textarea {
   line-height: 1.5;
 }
 .tab .ico {
-  font-size: 19px;
+  font-size: 20px;
   line-height: 1;
 }
 .tab.on {
@@ -256,7 +256,7 @@ input, select, textarea {
 }
 .sec {
   font-family: 'IBM Plex Sans KR', system-ui, sans-serif;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: .01em;
   line-height: 1.7;
@@ -284,20 +284,31 @@ input, select, textarea {
   gap: 12px;
   padding: 10px 13px;
   border-bottom: 1px solid var(--line);
-  font-size: 13.5px;
+  font-size: 15px;
   align-items: baseline;
+  /* 라벨과 값이 한 줄에 안 들어가면 값을 아래로 내린다. 글자를 키운 뒤로는
+     좁은 폰에서 한 줄에 다 넣으면 라벨이 몇 글자만 남는다. */
+  flex-wrap: wrap;
 }
 .tr:last-child {
   border-bottom: none;
 }
 .tr .k {
   color: var(--soft);
-  flex: none;
+  /* 라벨은 줄어들되 이만큼은 남긴다. 더 좁아지면 .tr 이 줄바꿈해서
+     값을 아래 줄로 내려보낸다 — 라벨이 두세 글자만 남는 것보다 낫다. */
+  flex: 0 1 auto;
+  min-width: 8em;
 }
 .tr .v {
   text-align: right;
   font-family: 'IBM Plex Mono', monospace;
   font-variant-numeric: tabular-nums;
+  /* 금액과 버튼은 붙어 있어야 하므로 쪼개지 않는다. 줄바꿈되면
+     한 줄을 통째로 차지하며 오른쪽에 붙는다. */
+  flex: none;
+  margin-left: auto;
+  max-width: 100%;
 }
 .tr .v.txt {
   font-family: 'IBM Plex Sans KR', sans-serif;
@@ -320,7 +331,7 @@ input, select, textarea {
   display: inline-block;
   padding: 2px 9px;
   border-radius: 999px;
-  font-size: 11.5px;
+  font-size: 13.5px;
 }
 .badge.fund {
   background: rgba(42, 107, 92, .13);
@@ -370,7 +381,7 @@ input, select, textarea {
 .lab {
   display: block;
   font-family: 'IBM Plex Sans KR', system-ui, sans-serif;
-  font-size: 10.5px;
+  font-size: 12.5px;
   font-weight: 600;
   letter-spacing: .01em;
   line-height: 1.7;
@@ -393,7 +404,7 @@ input, select, textarea {
   box-shadow: 0 2px 9px -4px var(--shadow);
   line-height: 1.6;
   padding: 13px 16px;
-  font-size: 14.5px;
+  font-size: 15.5px;
   font-weight: 500;
   width: 100%;
   text-align: center;
@@ -402,7 +413,7 @@ input, select, textarea {
 }
 .btn.sm {
   padding: 9px 12px;
-  font-size: 13px;
+  font-size: 14.5px;
   border-radius: 8px;
 }
 .btn.ghost {
@@ -437,7 +448,7 @@ input, select, textarea {
   background: var(--card);
   border-radius: 999px;
   padding: 6px 12px;
-  font-size: 12.5px;
+  font-size: 14px;
   color: var(--soft);
 }
 .chip.on {
@@ -474,25 +485,25 @@ input, select, textarea {
   align-items: baseline;
 }
 .item .name {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .item .meta {
-  font-size: 11.5px;
+  font-size: 13.5px;
   color: var(--soft);
   margin-top: 3px;
 }
 .item .x {
-  font-size: 11.5px;
+  font-size: 13.5px;
   color: var(--jade);
   padding: 2px 4px;
   white-space: nowrap;
 }
 .item .top .pair {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
   white-space: nowrap;
 }
@@ -519,7 +530,7 @@ input, select, textarea {
   flex: 1;
   border: none;
   background: none;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
   padding: 0;
   min-width: 0;
@@ -555,7 +566,7 @@ input, select, textarea {
   right: 10px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 12px;
+  font-size: 13.5px;
   color: var(--soft);
 }
 .editrow {
@@ -569,16 +580,16 @@ input, select, textarea {
   text-align: center;
   padding: 40px 24px;
   color: var(--soft);
-  font-size: 13.5px;
+  font-size: 15px;
   line-height: 1.7;
 }
 .note {
-  font-size: 11.5px;
+  font-size: 13.5px;
   color: var(--soft);
   line-height: 1.7;
 }
 .err {
-  font-size: 12.5px;
+  font-size: 14px;
   color: var(--rose);
   line-height: 1.6;
   margin-top: 9px;
@@ -589,7 +600,7 @@ input, select, textarea {
   justify-content: space-between;
   padding: 9px 20px 0;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 10.5px;
+  font-size: 12.5px;
   letter-spacing: .1em;
   color: var(--soft);
 }
@@ -616,7 +627,7 @@ input, select, textarea {
 .steps li {
   position: relative;
   padding: 0 0 12px 26px;
-  font-size: 13px;
+  font-size: 14.5px;
   line-height: 1.6;
 }
 .steps li::before {
@@ -629,7 +640,7 @@ input, select, textarea {
   background: var(--jade);
   color: #F1F4EE;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 10.5px;
+  font-size: 12.5px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -656,7 +667,7 @@ input, select, textarea {
 }
 .segmented button {
   flex: 1;
-  font-size: 12.5px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--soft);
   padding: 8px 6px;
@@ -698,7 +709,7 @@ input, select, textarea {
 }
 .fgroup .flab {
   flex: 0 0 auto;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--soft);
   letter-spacing: .06em;
@@ -710,7 +721,7 @@ input, select, textarea {
 }
 .fgroup .chip {
   padding: 4px 9px;
-  font-size: 11.5px;
+  font-size: 13.5px;
   border-radius: 8px;
   line-height: 1.6;
 }
@@ -722,7 +733,7 @@ input, select, textarea {
   color: var(--soft);
   border-radius: 8px;
   padding: 4px 10px;
-  font-size: 11.5px;
+  font-size: 13.5px;
   font-weight: 600;
   line-height: 1.6;
   white-space: nowrap;
@@ -802,7 +813,7 @@ input, select, textarea {
   border: 1px solid var(--line);
   background: var(--paper);
   color: var(--soft);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1;
   cursor: help;
@@ -830,7 +841,7 @@ input, select, textarea {
   color: var(--paper);
   border-radius: 9px;
   padding: 9px 11px;
-  font-size: 11.5px;
+  font-size: 13.5px;
   font-weight: 400;
   line-height: 1.65;
   letter-spacing: 0;
@@ -865,7 +876,7 @@ input, select, textarea {
   justify-content: space-between;
   gap: 10px;
   padding: 13px 14px;
-  font-size: 13.5px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--ink);
   line-height: 1.6;
@@ -881,7 +892,7 @@ input, select, textarea {
   color: var(--soft);
   display: grid;
   place-items: center;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   line-height: 1;
 }
@@ -896,7 +907,7 @@ input, select, textarea {
 }
 /* 그룹 제목 — .sec 보다 크게 두어 묶음임을 드러낸다 */
 .group {
-  font-size: 12.5px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: .01em;
   color: var(--ink);
@@ -924,7 +935,7 @@ input, select, textarea {
   line-height: 1.6;
 }
 .daygroup .d {
-  font-size: 12.5px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--ink);
   font-family: 'IBM Plex Mono', monospace;
@@ -932,7 +943,7 @@ input, select, textarea {
 }
 .daygroup .n {
   flex: 1;
-  font-size: 11.5px;
+  font-size: 13.5px;
   color: var(--soft);
   font-variant-numeric: tabular-nums;
 }
@@ -946,7 +957,7 @@ input, select, textarea {
   color: var(--soft);
   display: grid;
   place-items: center;
-  font-size: 13px;
+  font-size: 14.5px;
   font-weight: 600;
   line-height: 1;
 }
@@ -984,14 +995,14 @@ input, select, textarea {
 }
 .pie-total {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
   line-height: 1.4;
 }
 .pie-cap {
-  font-size: 10.5px;
+  font-size: 12.5px;
   color: var(--soft);
   line-height: 1.5;
 }
@@ -1019,12 +1030,12 @@ input, select, textarea {
 }
 .pie-legend .l {
   flex: 1;
-  font-size: 12.5px;
+  font-size: 14px;
   color: var(--ink);
   line-height: 1.6;
 }
 .pie-legend .p {
-  font-size: 11.5px;
+  font-size: 13.5px;
   color: var(--soft);
   font-variant-numeric: tabular-nums;
   min-width: 44px;
@@ -1032,7 +1043,7 @@ input, select, textarea {
 }
 .pie-legend .a {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 12px;
+  font-size: 13.5px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
@@ -1057,7 +1068,7 @@ input, select, textarea {
 }
 /* 그룹 안에서 한 단계 더 묶는 소제목 */
 .subgroup {
-  font-size: 11.5px;
+  font-size: 13.5px;
   font-weight: 700;
   color: var(--soft);
   letter-spacing: .01em;
@@ -1084,7 +1095,7 @@ input, select, textarea {
   aspect-ratio: 1;
   display: grid;
   place-items: center;
-  font-size: 18px;
+  font-size: 19px;
   line-height: 1;
   border: 1px solid var(--line);
   background: var(--card);

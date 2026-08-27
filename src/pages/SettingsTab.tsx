@@ -288,7 +288,7 @@ export function SettingsTab() {
         <div className="sec">✍️ 환율 직접 입력</div>
         {currencies.map((c) => (
           <div className="row2" style={{ marginBottom: 7 }} key={c}>
-            <span className="k" style={{ flex: '0 0 42%', alignSelf: 'center', fontSize: 13 }}>
+            <span className="k" style={{ flex: '0 0 42%', alignSelf: 'center', fontSize: 14.5 }}>
               1 {currencyLabel(c)}
             </span>
             <input

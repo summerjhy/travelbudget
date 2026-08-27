@@ -122,9 +122,9 @@ export function BudgetPanel({
             <div className="tr" key={b.id}>
               <span className="k">
                 {b.memo || b.date}
-                <span style={{ opacity: 0.6, fontSize: 11.5 }}> · {b.date}</span>
+                <span style={{ opacity: 0.6, fontSize: 13.5 }}> · {b.date}</span>
                 {cur !== BASE_CURRENCY && b.original_amount !== null && (
-                  <span style={{ opacity: 0.75, fontSize: 11.5, display: 'block' }}>
+                  <span style={{ opacity: 0.75, fontSize: 13.5, display: 'block' }}>
                     {foreign(b.original_amount, cur)} × {b.rate}
                   </span>
                 )}

@@ -71,7 +71,7 @@ export function ShareTripButton({ trip }: { trip: Trip }) {
           readOnly
           value={fallback}
           onFocus={(e) => e.currentTarget.select()}
-          style={{ marginTop: 9, minHeight: 116, fontSize: 12.5 }}
+          style={{ marginTop: 9, minHeight: 116, fontSize: 14 }}
         />
       )}
     </>
