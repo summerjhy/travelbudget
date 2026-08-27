@@ -765,3 +765,20 @@ input, select, textarea {
   background: var(--accent-on);
   box-shadow: 0 0 0 1px rgba(0, 0, 0, .12);
 }
+
+/* ------------------------------ 홈: 카테고리 막대 ------------------------------ */
+.catbar {
+  flex: 1;
+  height: 6px;
+  border-radius: 99px;
+  background: var(--line);
+  overflow: hidden;
+  margin: 0 4px;
+}
+.catbar i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--jade);
+  opacity: .55;
+}

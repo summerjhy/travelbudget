@@ -5,6 +5,7 @@ import { CodeGate } from './pages/CodeGate'
 import { CreateTripForm } from './pages/CreateTripForm'
 import { NameGate } from './pages/NameGate'
 import { TripLayout } from './pages/TripLayout'
+import { HomeTab } from './pages/HomeTab'
 import { RecordTab } from './pages/RecordTab'
 import { HistoryTab } from './pages/HistoryTab'
 import { SettingsTab } from './pages/SettingsTab'
@@ -42,7 +43,8 @@ function Gate() {
   return (
     <Routes>
       <Route path="/" element={<TripLayout />}>
-        <Route index element={<RecordTab />} />
+        <Route index element={<HomeTab />} />
+        <Route path="record" element={<RecordTab />} />
         <Route path="history" element={<HistoryTab />} />
         <Route path="settings" element={<SettingsTab />} />
       </Route>

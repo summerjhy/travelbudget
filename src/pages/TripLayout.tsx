@@ -48,6 +48,9 @@ export function TripLayout() {
 
       <nav className="tabs">
         <NavLink to="." end className={({ isActive }) => 'tab' + (isActive ? ' on' : '')}>
+          <span className="ico" aria-hidden="true">🏠</span>홈
+        </NavLink>
+        <NavLink to="record" className={({ isActive }) => 'tab' + (isActive ? ' on' : '')}>
           <span className="ico" aria-hidden="true">✏️</span>기록
         </NavLink>
         <NavLink to="history" className={({ isActive }) => 'tab' + (isActive ? ' on' : '')}>
