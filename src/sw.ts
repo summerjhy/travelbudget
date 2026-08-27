@@ -73,5 +73,43 @@ registerRoute(
   'POST',
 )
 
+// 관리자 참여 알림. notify-join Edge Function 이 보낸 푸시를 받아 띄운다.
+self.addEventListener('push', (event) => {
+  // payload 가 없거나 깨져 있어도 알림 자체는 띄운다 — 조용히 삼키면
+  // 알림이 안 오는 건지 앱이 죽은 건지 구분이 안 된다.
+  let title = '🧳 여행 가계부'
+  let body = '새 소식이 있어요.'
+  try {
+    const data = event.data?.json()
+    if (data?.title) title = data.title
+    if (data?.body) body = data.body
+  } catch {
+    // 그대로 기본 문구를 쓴다.
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      // 같은 태그면 알림이 쌓이지 않고 최신 것으로 덮인다.
+      tag: 'travelbudget-notify',
+    }),
+  )
+})
+
+// 알림을 누르면 이미 열려 있는 창을 앞으로, 없으면 새로 연다.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (const c of list) {
+        if ('focus' in c) return c.focus()
+      }
+      return self.clients.openWindow('/')
+    }),
+  )
+})
+
 self.addEventListener('install', () => self.skipWaiting())
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()))
