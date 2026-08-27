@@ -15,6 +15,7 @@ import { won } from '../lib/format'
 import { Pair } from '../components/Pair'
 import { ExportPanel } from '../components/ExportPanel'
 import { Help } from '../components/Help'
+import { MemberName } from '../components/MemberName'
 
 interface Draft {
   title: string
@@ -224,7 +225,7 @@ export function HistoryTab() {
           <div className="chips">
             <button className={'chip' + (payerFilter === 'ALL' ? ' on' : '')} onClick={() => setPayerFilter('ALL')}>전체</button>
             {members.map((m) => (
-              <button key={m.id} className={'chip' + (payerFilter === m.id ? ' on' : '')} onClick={() => setPayerFilter(m.id)}>{m.displayName}</button>
+              <button key={m.id} className={'chip' + (payerFilter === m.id ? ' on' : '')} onClick={() => setPayerFilter(m.id)}><MemberName emoji={m.emoji} name={m.personName} /></button>
             ))}
           </div>
         </div>
@@ -362,7 +363,7 @@ export function HistoryTab() {
                         className={'chip' + (draft.paidBy === m.id ? ' on' : '')}
                         onClick={() => setDraft({ ...draft, paidBy: draft.paidBy === m.id ? null : m.id })}
                       >
-                        {m.displayName}
+                        <MemberName emoji={m.emoji} name={m.personName} />
                       </button>
                     ))}
                   </div>
@@ -370,7 +371,7 @@ export function HistoryTab() {
                     <button className={'chip fund' + (draft.memberId === null ? ' on' : '')} onClick={() => setDraft({ ...draft, memberId: null })}>공금</button>
                     {members.map((m) => (
                       <button key={m.id} className={'chip' + (draft.memberId === m.id ? ' on' : '')} onClick={() => setDraft({ ...draft, memberId: m.id })}>
-                        {m.displayName}
+                        <MemberName emoji={m.emoji} name={m.personName} />
                       </button>
                     ))}
                   </div>
@@ -386,13 +387,11 @@ export function HistoryTab() {
               )
             }
 
-            const memberName = e.member_id
-              ? allMembers.find((m) => m.id === e.member_id)?.displayName ?? '개인'
-              : '공금'
+            const owner = e.member_id ? allMembers.find((m) => m.id === e.member_id) : null
             // 결제자가 회계 귀속(member_id)과 다를 때만 따로 적는다. 같으면 중복이다.
-            const payerName =
+            const payer =
               e.paid_by && e.paid_by !== e.member_id
-                ? allMembers.find((m) => m.id === e.paid_by)?.displayName ?? null
+                ? allMembers.find((m) => m.id === e.paid_by)
                 : null
             // 원화 건은 환산이 없으므로 환율을 보여줄 게 없다.
             const shownRate =
@@ -408,9 +407,15 @@ export function HistoryTab() {
                   </div>
                   <div className="meta">
                     {e.date.slice(5).replace('-', '/')} · {e.category} ·{' '}
-                    <span style={{ color: e.member_id ? 'var(--marigold)' : 'var(--jade)' }}>{memberName}</span>
+                    <span style={{ color: e.member_id ? 'var(--marigold)' : 'var(--jade)' }}>
+                      {e.member_id
+                        ? owner
+                          ? <MemberName emoji={owner.emoji} name={owner.personName} />
+                          : '개인'
+                        : '공금'}
+                    </span>
                     {' · '}{paymentLabel(e.payment_method)}
-                    {payerName && <> · 결제 {payerName}</>}
+                    {payer && <> · 결제 <MemberName emoji={payer.emoji} name={payer.personName} /></>}
                     {shownRate && <> · {shownRate}</>}
                     {e.pending && <span style={{ color: 'var(--marigold)' }}> · 동기화 대기중</span>}
                   </div>

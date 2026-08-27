@@ -12,6 +12,7 @@ import { won } from '../lib/format'
 import { Pair } from '../components/Pair'
 import { useTripNames } from '../lib/useTripNames'
 import { CategoryPie } from '../components/CategoryPie'
+import { MemberName } from '../components/MemberName'
 import { Collapsible } from '../components/Collapsible'
 import { todayForTrip } from '../lib/tripDate'
 
@@ -92,7 +93,11 @@ export function HomeTab() {
         )}
         <div className="tr">
           <span className="k">함께</span>
-          <span className="v txt">{members.map((m) => m.displayName).join(' · ') || '나 혼자'}</span>
+          <span className="v txt" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 10px', justifyContent: 'flex-end' }}>
+            {members.length === 0
+              ? '나 혼자'
+              : members.map((m) => <MemberName key={m.id} emoji={m.emoji} name={m.personName} />)}
+          </span>
         </div>
         {foreignCurrencies(trip).length > 0 && (
           <div className="tr">
@@ -131,7 +136,7 @@ export function HomeTab() {
         {members.map((m) => (
           <div className="tr" key={m.id}>
             <span className="k">
-              {m.displayName}
+              <MemberName emoji={m.emoji} name={m.personName} />
               {m.personName === personName && <span className="badge" style={{ marginLeft: 5 }}>나</span>}
             </span>
             <span className="v">

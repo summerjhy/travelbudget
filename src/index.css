@@ -1100,3 +1100,33 @@ input, select, textarea {
 @media (max-width: 380px) {
   .emoji-grid { grid-template-columns: repeat(6, 1fr); }
 }
+
+/* ------------------------------ 참여자 이름 + 이모지 ------------------------------ */
+.mname {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  /* 줄바꿈될 때 이모지와 이름이 갈라지지 않게 */
+  white-space: nowrap;
+}
+.mname-emoji {
+  flex: 0 0 auto;
+  width: 1.55em;
+  height: 1.55em;
+  display: inline-grid;
+  place-items: center;
+  font-size: 1.06em;
+  line-height: 1;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  /* 이모지 자체는 폰트 기준선이 제각각이라 살짝 내려 앉히면 가운데가 맞는다 */
+  padding-top: 1px;
+}
+/* 칩 안에서는 칩 배경 위에 얹히므로 톤을 낮춘다.
+   선택된 칩은 강조색 위라 반투명 흰색이 자연스럽다. */
+.chip .mname-emoji {
+  background: color-mix(in srgb, var(--jade) 13%, transparent);
+}
+.chip.on .mname-emoji {
+  background: rgba(255, 255, 255, .22);
+}

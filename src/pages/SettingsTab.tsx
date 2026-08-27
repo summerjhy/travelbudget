@@ -12,6 +12,7 @@ import { BudgetPanel } from '../components/BudgetPanel'
 import { ShareTripButton } from '../components/ShareTripButton'
 import { Collapsible } from '../components/Collapsible'
 import { EmojiPicker } from '../components/EmojiPicker'
+import { MemberName } from '../components/MemberName'
 import { withEmoji } from '../lib/memberEmoji'
 import { todayForTrip } from '../lib/tripDate'
 
@@ -152,7 +153,7 @@ export function SettingsTab() {
           return (
             <div className="tr" key={m.id}>
               <span className="k">
-                {m.displayName}
+                <MemberName emoji={m.emoji} name={m.personName} />
                 {isMe && <span style={{ color: 'var(--jade)' }}> · 나</span>}
               </span>
               <span className="v txt">
