@@ -23,6 +23,27 @@ export const CATEGORIES: [string, string[]][] = [
 /** 화면의 카테고리 칩 목록. 자동 분류가 안 되면 기타로 떨어지므로 항상 포함한다. */
 export const CATEGORY_NAMES: string[] = CATEGORIES.map(([name]) => name).concat('기타')
 
+/** 칩·목록에서 카테고리 이름 앞에 붙이는 아이콘. DB에는 저장하지 않는 표시 전용 값이다. */
+const CATEGORY_EMOJI: Record<string, string> = {
+  식사: '🍚',
+  카페: '☕',
+  교통: '🚌',
+  숙소: '🏨',
+  관광: '🎫',
+  술: '🍺',
+  쇼핑: '🛍️',
+  기타: '🗂️',
+}
+
+export function categoryEmoji(name: string): string {
+  return CATEGORY_EMOJI[name] ?? '🗂️'
+}
+
+/** `식사` → `🍚 식사`. 칩 라벨용. */
+export function categoryChip(name: string): string {
+  return `${categoryEmoji(name)} ${name}`
+}
+
 export function guessCategory(text: string): string {
   for (const [category, keywords] of CATEGORIES) {
     for (const keyword of keywords) {

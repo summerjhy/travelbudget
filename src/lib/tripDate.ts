@@ -65,6 +65,30 @@ export function todayForTrip(trip: Trip | null | undefined): string {
   return dateInZone(new Date(), tripTimeZone(trip))
 }
 
+/** 어떤 시각을 그 시간대의 시:분(HH:MM, 24시간제)으로 바꾼다. */
+export function timeInZone(d: Date, tz: string): string {
+  try {
+    return new Intl.DateTimeFormat('en-GB', {
+      timeZone: tz,
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).format(d)
+  } catch {
+    return new Intl.DateTimeFormat('en-GB', {
+      timeZone: FALLBACK_TZ,
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).format(d)
+  }
+}
+
+/** 이 여행 기준 지금 시각(HH:MM). 항목을 입력한 시각을 자동으로 채우는 데 쓴다. */
+export function nowForTrip(trip: Trip | null | undefined): string {
+  return timeInZone(new Date(), tripTimeZone(trip))
+}
+
 /** 이 여행 기준 올해 (YYYY). 날짜 없는 입력의 연도 추정에 쓴다. */
 export function yearForTrip(trip: Trip | null | undefined): string {
   return todayForTrip(trip).slice(0, 4)

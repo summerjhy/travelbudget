@@ -66,6 +66,8 @@ export interface Entry {
   paid_by: string | null
   source: 'text' | 'image' | 'manual'
   created_by: string | null
+  /** 입력 시각(HH:MM, 여행 목적지 시간대). 마이그레이션 0011 이전 행은 null. */
+  time: string | null
   created_at: string
   updated_at: string
 }
