@@ -4,6 +4,10 @@ import { TripProvider, useTrip } from './context/TripContext'
 import { CodeGate } from './pages/CodeGate'
 import { CreateTripForm } from './pages/CreateTripForm'
 import { AdminConsole } from './pages/AdminConsole'
+import { AdminGate } from './pages/AdminGate'
+import { AdminMenu } from './pages/AdminMenu'
+import { AdminBrowse } from './pages/AdminBrowse'
+import { AdminProvider, useAdmin } from './context/AdminContext'
 import { NameGate } from './pages/NameGate'
 import { TripLayout } from './pages/TripLayout'
 import { HomeTab } from './pages/HomeTab'
@@ -11,10 +15,13 @@ import { RecordTab } from './pages/RecordTab'
 import { HistoryTab } from './pages/HistoryTab'
 import { SettingsTab } from './pages/SettingsTab'
 
+type AdminView = 'menu' | 'create' | 'browse' | 'manage'
+
 function Gate() {
   const { loading, trip, personName, connectTrip } = useTrip()
-  const [showCreateForm, setShowCreateForm] = useState(false)
-  const [showAdmin, setShowAdmin] = useState(false)
+  const { authed } = useAdmin()
+  // null 이면 관리자 화면이 아니다. 인증 전에는 AdminGate 가 대신 뜬다.
+  const [adminView, setAdminView] = useState<AdminView | null>(null)
 
   if (loading) {
     return (
@@ -27,22 +34,48 @@ function Gate() {
   }
 
   if (!trip) {
-    if (showAdmin && !showCreateForm) {
-      return <AdminConsole onBack={() => setShowAdmin(false)} onCreateTrip={() => setShowCreateForm(true)} />
-    }
-    if (showCreateForm) {
+    if (adminView !== null) {
+      if (!authed) return <AdminGate onBack={() => setAdminView(null)} />
+      if (adminView === 'create') {
+        return (
+          <CreateTripForm
+            onBack={() => setAdminView('menu')}
+            onCreated={(code) => {
+              setAdminView(null)
+              connectTrip(code)
+            }}
+          />
+        )
+      }
+      if (adminView === 'browse') {
+        return (
+          <AdminBrowse
+            onBack={() => setAdminView('menu')}
+            onEnter={(code) => {
+              setAdminView(null)
+              connectTrip(code)
+            }}
+          />
+        )
+      }
+      if (adminView === 'manage') {
+        return (
+          <AdminConsole
+            onBack={() => setAdminView('menu')}
+            onCreateTrip={() => setAdminView('create')}
+          />
+        )
+      }
       return (
-        <CreateTripForm
-          onBack={() => setShowCreateForm(false)}
-          onCreated={(code) => {
-            setShowCreateForm(false)
-            setShowAdmin(false)
-            connectTrip(code)
-          }}
+        <AdminMenu
+          onCreateTrip={() => setAdminView('create')}
+          onBrowse={() => setAdminView('browse')}
+          onManage={() => setAdminView('manage')}
+          onBack={() => setAdminView(null)}
         />
       )
     }
-    return <CodeGate onCreateTrip={() => setShowCreateForm(true)} onAdmin={() => setShowAdmin(true)} />
+    return <CodeGate onAdmin={() => setAdminView('menu')} />
   }
   if (!personName) return <NameGate />
 
@@ -60,9 +93,11 @@ function Gate() {
 
 function App() {
   return (
-    <TripProvider>
-      <Gate />
-    </TripProvider>
+    <AdminProvider>
+      <TripProvider>
+        <Gate />
+      </TripProvider>
+    </AdminProvider>
   )
 }
 

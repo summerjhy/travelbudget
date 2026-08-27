@@ -133,7 +133,16 @@ export function TripProvider({ children }: { children: ReactNode }) {
     setError(null)
     const result = await loadTrip(code)
     if (result.ok) {
+      // 이름은 여행별이 아니라 기기별로 저장되므로 다른 여행으로 옮겨도 같은
+      // 사람이다. 이게 없으면 코드를 바꿔 들어갈 때마다("다른 여행으로
+      // 이동하기", 관리자 둘러보기) 이미 그 여행의 참여자인데도 이름을 다시
+      // 물어본다. setStoredTripCode 가 이름을 지우므로 그 전에 읽어둔다.
+      const name = getStoredPersonName()
       setStoredTripCode(code)
+      if (name) {
+        setPersonNameState(name)
+        setStoredPersonName(name)
+      }
     }
     return result
   }

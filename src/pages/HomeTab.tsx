@@ -179,7 +179,7 @@ export function HomeTab() {
         })
       )}
       <p className="note" style={{ marginTop: 9 }}>
-        만들어진 여행 이름만 보여요. 들어가려면 설정 탭 &gt; 맨 하단의 <b>다른 여행 코드로 전환</b>을 눌러주세요.
+        만들어진 여행 이름만 보여요. 다른 여행에 들어가려면 그 여행의 코드를 알아야 해요. 설정 탭 맨 아래의 <b>다른 여행으로 이동하기</b>를 눌러주세요.
       </p>
       <div style={{ height: 20 }} />
     </section>
