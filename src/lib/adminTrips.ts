@@ -11,6 +11,7 @@ export interface AdminTrip {
   start_date: string
   end_date: string | null
   destinations: string[]
+  tz: string
   spend_currencies: string[]
   created_at: string
   /** 이 여행에 딸린 지출 건수. 삭제할 때 뭘 잃는지 보여준다. */
@@ -23,6 +24,7 @@ export interface TripPatch {
   startDate?: string
   endDate?: string | null
   destinations?: string[]
+  tz?: string
   spendCurrencies?: string[]
 }
 

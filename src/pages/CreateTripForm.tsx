@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { createTrip } from '../lib/createTrip'
 import { CURRENCY_GROUPS, currencyLabel } from '../lib/currencies'
 import { CONTINENTS, destinationLabel } from '../lib/destinations'
+import { tzOfFirstDestination } from '../lib/tripDate'
 
 /** 도시 셀렉트의 특수 항목 값. 실제 도시 이름과 겹치지 않도록 언더스코어를 쓴다. */
 const CITY_NONE = '__none__'
@@ -98,6 +99,8 @@ export function CreateTripForm({ onBack, onCreated }: { onBack: () => void; onCr
       startDate,
       endDate: endDate || undefined,
       destinations,
+      // '오늘' 판정 기준. 목적지 나라의 시간대를 그대로 박아둔다.
+      tz: countries.find((c) => c.name === country)?.tz ?? tzOfFirstDestination(destinations),
       spendCurrencies: currencies.length ? currencies : ['KRW'],
     })
     setSubmitting(false)

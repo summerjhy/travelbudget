@@ -28,6 +28,7 @@ interface Body {
     startDate?: string
     endDate?: string | null
     destinations?: string[]
+    tz?: string
     spendCurrencies?: string[]
   }
 }
@@ -67,7 +68,7 @@ Deno.serve(async (req: Request) => {
   if (body.action === 'list') {
     const { data: trips, error } = await supabase
       .from('trips')
-      .select('id, code, name, start_date, end_date, destinations, spend_currencies, created_at')
+      .select('id, code, name, start_date, end_date, destinations, tz, spend_currencies, created_at')
       .order('created_at', { ascending: false })
     if (error) return jsonResponse({ error: error.message }, 500)
 
@@ -101,6 +102,7 @@ Deno.serve(async (req: Request) => {
     if (p.startDate !== undefined) patch.start_date = p.startDate
     if (p.endDate !== undefined) patch.end_date = p.endDate || null
     if (p.destinations !== undefined) patch.destinations = p.destinations
+    if (p.tz !== undefined) patch.tz = p.tz
     if (p.spendCurrencies !== undefined) {
       if (p.spendCurrencies.length === 0) {
         return jsonResponse({ error: '통화를 하나 이상 골라주세요.' }, 400)

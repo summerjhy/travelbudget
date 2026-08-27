@@ -11,10 +11,7 @@ import { ExportPanel } from '../components/ExportPanel'
 import { BudgetPanel } from '../components/BudgetPanel'
 import { ShareTripButton } from '../components/ShareTripButton'
 import { Collapsible } from '../components/Collapsible'
-
-function todayDate(): string {
-  return new Date().toISOString().slice(0, 10)
-}
+import { todayForTrip } from '../lib/tripDate'
 
 export function SettingsTab() {
   const { trip, personName, member, switchTrip, renameMe } = useTrip()
@@ -37,7 +34,7 @@ export function SettingsTab() {
   const currencies = foreignCurrencies(trip)
   // 환율도 예산도 "지금" 기준이다. 여행 시작일이 아직 안 왔다고 그 날짜로 잡으면
   // 미래 날짜라 외부 API 가 값을 못 주고, 목록에도 오늘이 아닌 날짜가 떠서 헷갈린다.
-  const defaultRateDate = todayDate()
+  const defaultRateDate = todayForTrip(trip)
 
   function pickTheme(next: ThemeCode) {
     setTheme(next)
