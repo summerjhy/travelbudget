@@ -3,12 +3,12 @@ import { useTrip } from '../context/TripContext'
 import { MAX_NAME_LENGTH, useTripMembers } from '../lib/useTripMembers'
 import { useRates } from '../lib/useRates'
 import { useBudgets } from '../lib/useBudgets'
-import { won } from '../lib/format'
 import { currencyLabel } from '../lib/currencies'
 import { foreignCurrencies } from '../lib/tripCurrency'
 import { THEMES, applyTheme, getStoredTheme, setStoredTheme, type ThemeCode } from '../lib/themes'
 import { useEntries } from '../lib/useEntries'
 import { ExportPanel } from '../components/ExportPanel'
+import { BudgetPanel } from '../components/BudgetPanel'
 
 function todayDate(): string {
   return new Date().toISOString().slice(0, 10)
@@ -18,11 +18,9 @@ export function SettingsTab() {
   const { trip, personName, member, switchTrip, renameMe } = useTrip()
   const { members, allMembers, refresh: refreshMembers, addMember, deactivateMember } = useTripMembers(trip?.id)
   const { rates, setManualRate, fetchNow } = useRates(trip?.id, trip?.code)
-  const { budgets, total, addBudget, removeBudget } = useBudgets(trip?.id)
+  const { budgets, total, addBudget, updateBudget, removeBudget } = useBudgets(trip?.id)
   const { entries } = useEntries(trip?.id)
 
-  const [addAmount, setAddAmount] = useState('')
-  const [addMemo, setAddMemo] = useState('')
   // 통화별 직접입력 칸. 통화 코드 → 입력 중인 값.
   const [rateInputs, setRateInputs] = useState<Record<string, string>>({})
   const [rateBusy, setRateBusy] = useState(false)
@@ -38,18 +36,6 @@ export function SettingsTab() {
   // 환율도 예산도 "지금" 기준이다. 여행 시작일이 아직 안 왔다고 그 날짜로 잡으면
   // 미래 날짜라 외부 API 가 값을 못 주고, 목록에도 오늘이 아닌 날짜가 떠서 헷갈린다.
   const defaultRateDate = todayDate()
-
-  async function handleAddBudget() {
-    const amount = Number(addAmount.replace(/[^\d]/g, ''))
-    if (!amount) return
-    const result = await addBudget(amount, defaultRateDate, addMemo.trim() || '추가 예산')
-    if (result.ok) {
-      setAddAmount('')
-      setAddMemo('')
-    } else {
-      setError(result.error ?? '예산 추가에 실패했어요.')
-    }
-  }
 
   function pickTheme(next: ThemeCode) {
     setTheme(next)
@@ -83,12 +69,6 @@ export function SettingsTab() {
     const result = await deactivateMember(memberId)
     if (!result.ok) setMemberError(result.error ?? '삭제에 실패했어요.')
   }
-  async function handleRemoveBudget(id: string) {
-    if (!confirm('이 예산 항목을 지울까요?')) return
-    const result = await removeBudget(id)
-    if (!result.ok) setError(result.error ?? '삭제에 실패했어요.')
-  }
-
   async function handleManualRate(currency: string) {
     const v = parseFloat(rateInputs[currency] ?? '')
     if (!v) return
@@ -139,32 +119,18 @@ export function SettingsTab() {
         </p>
       </div>
       <div className="sec">💰 공금 예산</div>
-      <div className="box" style={{ marginBottom: 10 }}>
-        {budgets.map((b) => (
-          <div className="tr" key={b.id}>
-            <span className="k">
-              {b.memo || b.date}
-              <span style={{ opacity: 0.6, fontSize: 11.5 }}> · {b.date}</span>
-            </span>
-            <span className="v">
-              {won(b.amount)}
-              {budgets.length > 1 && (
-                <button className="x" style={{ color: 'var(--rose)', fontSize: 11, marginLeft: 6 }} onClick={() => handleRemoveBudget(b.id)}>삭제</button>
-              )}
-            </span>
-          </div>
-        ))}
-        <div className="tr" style={{ background: 'rgba(42,107,92,.06)' }}>
-          <span className="k" style={{ fontWeight: 600, color: 'var(--ink)' }}>합계</span>
-          <span className="v" style={{ fontWeight: 600 }}>{won(total)}</span>
-        </div>
-      </div>
-      <div className="row2" style={{ marginBottom: 7 }}>
-        <input className="inp num" inputMode="numeric" placeholder="추가 금액 (원)" value={addAmount} onChange={(e) => setAddAmount(e.target.value)} />
-        <input className="inp" placeholder="메모" style={{ flex: '0 0 38%' }} value={addMemo} onChange={(e) => setAddMemo(e.target.value)} />
-      </div>
-      <button className="btn ghost" onClick={handleAddBudget}>예산 추가</button>
-      <p className="note" style={{ marginTop: 9 }}>여행 중에 공금을 더 걷으면 여기에 추가하세요. 예산 총액과 잔여가 바로 반영돼요.</p>
+      {trip && (
+        <BudgetPanel
+          trip={trip}
+          budgets={budgets}
+          total={total}
+          rates={rates}
+          addBudget={addBudget}
+          updateBudget={updateBudget}
+          removeBudget={removeBudget}
+          today={defaultRateDate}
+        />
+      )}
 
       {currencies.length > 0 && (
         <>
