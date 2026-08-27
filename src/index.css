@@ -679,7 +679,7 @@ input, select, textarea {
   border: 1px solid var(--line);
   border-radius: 14px;
   box-shadow: 0 2px 10px -4px var(--shadow);
-  overflow: hidden;
+  /* 도움말 말풍선이 카드 밖으로 나와야 해서 hidden 을 쓰지 않는다 */
 }
 .fgroup {
   display: flex;
@@ -689,6 +689,12 @@ input, select, textarea {
 }
 .fgroup + .fgroup {
   border-top: 1px solid var(--line);
+}
+.fgroup:first-child {
+  border-radius: 14px 14px 0 0;
+}
+.fgroup:last-child {
+  border-radius: 0 0 14px 14px;
 }
 .fgroup .flab {
   flex: 0 0 auto;
@@ -781,4 +787,64 @@ input, select, textarea {
   border-radius: 99px;
   background: var(--jade);
   opacity: .55;
+}
+
+/* ------------------------------ 도움말 ? 뱃지 ------------------------------ */
+.help {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--soft);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+  padding: 0;
+}
+.help:hover,
+.help[aria-expanded="true"] {
+  border-color: var(--jade);
+  color: var(--jade);
+}
+/* 말풍선. 마우스오버(데스크톱)와 클릭(터치) 둘 다로 열린다. */
+.help .bubble {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 7px);
+  z-index: 30;
+  /* 고정 폭으로 두고 줄바꿈시킨다. max-content 를 쓰면 한 줄로 뻗어 잘린다.
+     .flab 이 nowrap 이라 상속을 끊어야 감싼다. */
+  width: min(252px, calc(100vw - 72px));
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  text-align: left;
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: 9px;
+  padding: 9px 11px;
+  font-size: 11.5px;
+  font-weight: 400;
+  line-height: 1.65;
+  letter-spacing: 0;
+  cursor: auto;
+  box-shadow: 0 6px 18px -6px rgba(0, 0, 0, .4);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .12s ease;
+}
+.help:hover .bubble,
+.help[aria-expanded="true"] .bubble {
+  opacity: 1;
+  visibility: visible;
+}
+@media (prefers-reduced-motion: reduce) {
+  .help .bubble { transition: none; }
 }

@@ -7,7 +7,7 @@ import { useBudgets } from '../lib/useBudgets'
 import { useOfflineSync } from '../lib/useOfflineSync'
 import { usePolling } from '../lib/usePolling'
 import { parseText, parserConfig, type ParsedEntry } from '../lib/parser'
-import { guessCategory } from '../lib/categories'
+import { CATEGORY_NAMES, guessCategory } from '../lib/categories'
 import { latestRateFor, rateFor, resolveAmount, type RateTable } from '../lib/rates'
 import { computeTotals, entryCurrency } from '../lib/totals'
 import { foreign, won } from '../lib/format'
@@ -448,6 +448,17 @@ export function RecordTab() {
                   ))}
                   {other && <span className="note" style={{ marginLeft: 2 }}>≈ {other}</span>}
                   <button className="chip" style={{ marginLeft: 'auto' }} onClick={() => removePreviewItem(i)}>빼기</button>
+                </div>
+                <div className="chips" style={{ marginTop: 7 }}>
+                  {CATEGORY_NAMES.map((c) => (
+                    <button
+                      key={c}
+                      className={'chip' + (p.category === c ? ' on' : '')}
+                      onClick={() => updatePreviewItem(i, { category: c })}
+                    >
+                      {c}
+                    </button>
+                  ))}
                 </div>
                 <div className="chips" style={{ marginTop: 7 }}>
                   {PAYMENT_METHODS.map((m) => (
