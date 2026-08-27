@@ -24,7 +24,7 @@ import {
 import { DEFAULT_PAYMENT_METHOD, PAYMENT_METHODS, isPaymentMethod, paymentLabel } from '../lib/payment'
 import { resizeAndCompressMany } from '../lib/imageResize'
 import { parseImages } from '../lib/parseImage'
-import { consumeSharedFiles } from '../lib/shareTarget'
+import { consumeSharedFiles, takeShareFlag } from '../lib/shareTarget'
 import { Pair } from '../components/Pair'
 import type { Entry } from '../lib/types'
 
@@ -108,16 +108,26 @@ export function RecordTab() {
     setPayerState(getStoredPayer(tripCode))
   }, [tripCode])
 
-  // 안드로이드 공유 시트로 이 앱을 열면(share_target) URL에 ?share-target=1이 붙는다.
+  // 안드로이드 공유 시트로 이 앱을 열면(share_target) /record?share-target=... 로 온다.
   // 서비스워커가 IndexedDB에 저장해둔 공유 이미지를 꺼내 자동으로 분석한다.
   useEffect(() => {
     if (!trip) return
-    const params = new URLSearchParams(window.location.search)
-    if (params.get('share-target') !== '1') return
-    window.history.replaceState({}, '', window.location.pathname)
-    consumeSharedFiles().then((files) => {
-      if (files.length > 0) processPhotos(files)
-    })
+    const shared = takeShareFlag()
+    if (!shared) return
+
+    // 공유로 들어왔으면 사진 모드를 보여준다. 실패해도 바로 고를 수 있게.
+    setMode('photo')
+
+    if (shared !== '1') {
+      setError('공유한 사진을 받지 못했어요. 아래에서 직접 골라주세요.')
+      return
+    }
+    consumeSharedFiles()
+      .then((files) => {
+        if (files.length > 0) processPhotos(files)
+        else setError('공유한 사진을 찾지 못했어요. 아래에서 직접 골라주세요.')
+      })
+      .catch(() => setError('공유한 사진을 여는 데 실패했어요. 아래에서 직접 골라주세요.'))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trip?.id])
 

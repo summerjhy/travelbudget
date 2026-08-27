@@ -32,7 +32,9 @@ export default defineConfig({
           enctype: 'multipart/form-data',
           params: {
             files: [
-              { name: 'images', accept: ['image/jpeg', 'image/png', 'image/webp'] },
+              // image/* 를 넣어야 공유 시트에 안정적으로 뜬다. 구체 타입만 적으면
+              // 캡쳐를 image/* 로 넘기는 앱에서 목록에 아예 안 나온다.
+              { name: 'images', accept: ['image/*', 'image/jpeg', 'image/png', 'image/webp'] },
             ],
           },
         } as never,

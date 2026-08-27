@@ -51,12 +51,24 @@ async function storeSharedFiles(files: File[]) {
 registerRoute(
   ({ url, request }) => url.pathname === '/share-target' && request.method === 'POST',
   async ({ request }) => {
-    const formData = await request.formData()
-    const files = formData.getAll('images').filter((f): f is File => f instanceof File)
-    if (files.length > 0) {
-      await storeSharedFiles(files)
+    try {
+      const formData = await request.formData()
+      // manifest 에는 'images' 로 적어뒀지만, 기기·앱에 따라 다른 이름으로
+      // 보내는 경우가 있어 폼 전체에서 파일을 긁어모은다.
+      const files: File[] = []
+      for (const value of formData.values()) {
+        if (value instanceof File && value.size > 0) files.push(value)
+      }
+      if (files.length > 0) {
+        await storeSharedFiles(files)
+        return Response.redirect('/record?share-target=1', 303)
+      }
+      // 파일이 없으면 그냥 앱을 연다 — 빈 화면으로 떨어지는 것보다 낫다.
+      return Response.redirect('/record?share-target=empty', 303)
+    } catch {
+      // 저장에 실패해도 앱은 열어준다. 사용자가 사진을 직접 고를 수 있다.
+      return Response.redirect('/record?share-target=error', 303)
     }
-    return Response.redirect('/?share-target=1', 303)
   },
   'POST',
 )
