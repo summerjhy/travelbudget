@@ -80,5 +80,14 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: message }, status)
   }
 
+  // 홈 화면 공개 목록에 이름만 넣는다 (마이그레이션 0005).
+  // 실패해도 여행 생성 자체는 성공이므로 막지 않고 로그만 남긴다.
+  const { error: nameError } = await supabase
+    .from('trip_names')
+    .insert({ trip_id: data.id, name: data.name, created_at: data.created_at })
+  if (nameError) {
+    console.error('trip_names insert 실패', nameError.message)
+  }
+
   return jsonResponse({ trip: data }, 201)
 })
