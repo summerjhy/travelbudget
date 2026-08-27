@@ -10,6 +10,7 @@ import { useEntries } from '../lib/useEntries'
 import { ExportPanel } from '../components/ExportPanel'
 import { BudgetPanel } from '../components/BudgetPanel'
 import { ShareTripButton } from '../components/ShareTripButton'
+import { Collapsible } from '../components/Collapsible'
 
 function todayDate(): string {
   return new Date().toISOString().slice(0, 10)
@@ -99,26 +100,8 @@ export function SettingsTab() {
 
   return (
     <section className="pad">
-      <div className="sec first">🎨 화면 색상</div>
-      <div className="box" style={{ padding: 14, marginBottom: 10 }}>
-        <div className="dots" role="group" aria-label="화면 색상 고르기">
-          {THEMES.map((t) => (
-            <button
-              key={t.code}
-              className="dot"
-              aria-pressed={theme === t.code}
-              aria-label={t.label}
-              title={t.label}
-              onClick={() => pickTheme(t.code)}
-            >
-              <i style={{ background: t.swatch }} />
-            </button>
-          ))}
-        </div>
-        <p className="note" style={{ marginTop: 9 }}>
-          기분따라 바꿔 쓰세요. 이 기기에서만 바뀌고 다른 사람 화면은 그대로예요.
-        </p>
-      </div>
+      {/* ───────── 여행 설정값 확인 ───────── */}
+      <div className="group first">🧭 여행 설정값 확인</div>
       <div className="sec">💰 공금 예산</div>
       {trip && (
         <BudgetPanel
@@ -263,44 +246,76 @@ export function SettingsTab() {
         입력할 때 이 자리에 그대로 이어져요 — 이름이 다르면 따로 생기니 철자를 맞춰주세요.
       </p>
 
-      <div className="sec">📱 홈 화면에 앱처럼 두기</div>
-      <div className="box" style={{ padding: '14px 15px', marginBottom: 10 }}>
-        <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 10 }}>아이폰 (Safari)</div>
+      <div className="sec">🔄 다른 여행</div>
+      <button className="btn quiet" onClick={switchTrip}>다른 여행 코드로 전환</button>
+      <p className="note" style={{ marginTop: 9 }}>
+        새 코드를 입력하면 그 여행으로 이동해요. 지금 코드를 다시 입력하면 이 여행으로 돌아올 수 있어요.
+      </p>
+
+
+      {/* ───────── 사용 꿀팁 (기본 접힘) ───────── */}
+      <div className="group">💡 여행 가계부 사용 꿀팁</div>
+
+      <Collapsible title="🎨 화면 색상 바꾸기">
+        <div className="box" style={{ padding: 14, marginBottom: 10 }}>
+          <div className="dots" role="group" aria-label="화면 색상 고르기">
+            {THEMES.map((t) => (
+              <button
+                key={t.code}
+                className="dot"
+                aria-pressed={theme === t.code}
+                aria-label={t.label}
+                title={t.label}
+                onClick={() => pickTheme(t.code)}
+              >
+                <i style={{ background: t.swatch }} />
+              </button>
+            ))}
+          </div>
+          <p className="note" style={{ marginTop: 9 }}>
+            기분따라 바꿔 쓰세요. 이 기기에서만 바뀌고 다른 사람 화면은 그대로예요.
+          </p>
+        </div>
+      </Collapsible>
+
+      <Collapsible title="📱 아이폰 홈 화면에 두는 방법">
         <ol className="steps">
           <li>카톡에서 링크를 연 뒤 오른쪽 아래 <b>⋯ → Safari로 열기</b></li>
           <li>아래 가운데 <b>공유 버튼(↑)</b> 탭</li>
           <li><b>홈 화면에 추가</b> 선택</li>
           <li>이름 바꾸고 <b>추가</b></li>
         </ol>
-      </div>
-      <div className="box" style={{ padding: '14px 15px' }}>
-        <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 10 }}>갤럭시 (Chrome)</div>
+      </Collapsible>
+
+      <Collapsible title="📱 갤럭시 홈 화면에 두는 방법">
         <ol className="steps">
           <li>카톡에서 링크를 연 뒤 <b>다른 브라우저로 열기 → Chrome</b></li>
           <li>오른쪽 위 <b>⋮</b> 탭</li>
           <li><b>홈 화면에 추가</b> 선택</li>
           <li><b>설치</b> 또는 <b>추가</b> 누르기</li>
         </ol>
-      </div>
-      <p className="note" style={{ marginTop: 9 }}>
-        홈 화면에 설치하면 앱처럼 아이콘으로 바로 열 수 있어요.
-      </p>
+        <p className="note" style={{ marginTop: 9 }}>
+          홈 화면에 설치하면 앱처럼 아이콘으로 바로 열 수 있어요.
+        </p>
+      </Collapsible>
 
-      <div className="sec">📸 캡쳐로 바로 기록하기</div>
-      <div className="box" style={{ padding: '14px 15px' }}>
+      <Collapsible title="📸 갤럭시에서 캡쳐로 바로 기록하기">
         <p className="note" style={{ margin: 0 }}>
-          <b>갤럭시(안드로이드)</b>: 카드 결제 캡쳐를 찍고 공유 버튼을 누르면 공유 대상 목록에 이 앱이 떠요. 앱을 고르면 캡쳐 → 공유만으로 자동 분석까지 끝나요.
+          카드 결제 캡쳐를 찍고 공유 버튼을 누르면 공유 대상 목록에 이 앱이 떠요.
+          앱을 고르면 캡쳐 → 공유만으로 자동 분석까지 끝나요.
         </p>
         <p className="note" style={{ margin: '9px 0 0' }}>
-          <b>아이폰(iOS)</b>: iOS는 앱 간 공유 시트에 홈 화면 앱을 등록하는 기능을 지원하지 않아요. 기록 탭의 <b>사진으로 읽어들이기</b> 버튼으로 캡쳐를 직접 선택해주세요.
+          목록에 안 보이면 홈 화면 아이콘을 지우고 다시 설치해주세요.
+          공유 기능은 설치할 때 등록돼요.
         </p>
-      </div>
+      </Collapsible>
 
-      <div className="sec">🔄 다른 여행</div>
-      <button className="btn quiet" onClick={switchTrip}>다른 여행 코드로 전환</button>
-      <p className="note" style={{ marginTop: 9 }}>
-        새 코드를 입력하면 그 여행으로 이동해요. 지금 코드를 다시 입력하면 이 여행으로 돌아올 수 있어요.
-      </p>
+      <Collapsible title="📸 아이폰에서 캡쳐로 기록하기">
+        <p className="note" style={{ margin: 0 }}>
+          iOS는 앱 간 공유 시트에 홈 화면 앱을 등록하는 기능을 지원하지 않아요.
+          기록 탭의 <b>📸 사진으로</b> 를 눌러 캡쳐를 직접 선택해주세요.
+        </p>
+      </Collapsible>
 
       <div className="sec">📮 함께 쓰기</div>
       {trip && <ShareTripButton trip={trip} />}
