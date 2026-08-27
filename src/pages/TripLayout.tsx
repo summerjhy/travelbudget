@@ -24,12 +24,17 @@ export function TripLayout() {
   return (
     <div className="wrap">
       <header className="head">
-        <div className="eyebrow">{trip?.code}</div>
-        <h1 className="title">{trip?.name}</h1>
+        <div className="headrow">
+          <h1 className="title">{trip?.name} ✨</h1>
+          <div className="eyebrow">{trip?.code}</div>
+        </div>
         <div className="remain">
-          <b>{won(totals.remain)}</b>
+          <b>💰 {won(totals.remain)}</b>
           {summary && <em>{foreign(totals.remainCny, summary)}</em>}
-          <span>잔여 · 예산 {won(totals.budget)} 중 {totals.pct.toFixed(1)}% 사용</span>
+          <span>
+            <span>잔여 예산</span>
+            <span>{totals.pct.toFixed(1)}% 사용</span>
+          </span>
         </div>
         <div className="gauge">
           <i
@@ -39,13 +44,19 @@ export function TripLayout() {
         </div>
       </header>
 
-      <nav className="tabs">
-        <NavLink to="." end className={({ isActive }) => 'tab' + (isActive ? ' on' : '')}>기록</NavLink>
-        <NavLink to="history" className={({ isActive }) => 'tab' + (isActive ? ' on' : '')}>내역</NavLink>
-        <NavLink to="settings" className={({ isActive }) => 'tab' + (isActive ? ' on' : '')}>설정</NavLink>
-      </nav>
-
       <Outlet />
+
+      <nav className="tabs">
+        <NavLink to="." end className={({ isActive }) => 'tab' + (isActive ? ' on' : '')}>
+          <span className="ico" aria-hidden="true">✏️</span>기록
+        </NavLink>
+        <NavLink to="history" className={({ isActive }) => 'tab' + (isActive ? ' on' : '')}>
+          <span className="ico" aria-hidden="true">📄</span>내역
+        </NavLink>
+        <NavLink to="settings" className={({ isActive }) => 'tab' + (isActive ? ' on' : '')}>
+          <span className="ico" aria-hidden="true">⚙️</span>설정
+        </NavLink>
+      </nav>
     </div>
   )
 }

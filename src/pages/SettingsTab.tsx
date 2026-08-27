@@ -6,6 +6,7 @@ import { useBudgets } from '../lib/useBudgets'
 import { won } from '../lib/format'
 import { currencyLabel } from '../lib/currencies'
 import { foreignCurrencies } from '../lib/tripCurrency'
+import { THEMES, applyTheme, getStoredTheme, setStoredTheme, type ThemeCode } from '../lib/themes'
 
 function todayDate(): string {
   return new Date().toISOString().slice(0, 10)
@@ -27,6 +28,7 @@ export function SettingsTab() {
   const [editingName, setEditingName] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
   const [memberError, setMemberError] = useState<string | null>(null)
+  const [theme, setTheme] = useState<ThemeCode>(getStoredTheme)
 
   const sortedRateDates = Object.keys(rates).sort()
   const currencies = foreignCurrencies(trip)
@@ -44,6 +46,12 @@ export function SettingsTab() {
     } else {
       setError(result.error ?? '예산 추가에 실패했어요.')
     }
+  }
+
+  function pickTheme(next: ThemeCode) {
+    setTheme(next)
+    applyTheme(next)
+    setStoredTheme(next)
   }
 
   async function handleAddMember() {
@@ -107,7 +115,27 @@ export function SettingsTab() {
 
   return (
     <section className="pad">
-      <div className="sec first">공금 예산</div>
+      <div className="sec first">🎨 화면 색상</div>
+      <div className="box" style={{ padding: 14, marginBottom: 10 }}>
+        <div className="dots" role="group" aria-label="화면 색상 고르기">
+          {THEMES.map((t) => (
+            <button
+              key={t.code}
+              className="dot"
+              aria-pressed={theme === t.code}
+              aria-label={t.label}
+              title={t.label}
+              onClick={() => pickTheme(t.code)}
+            >
+              <i style={{ background: t.swatch }} />
+            </button>
+          ))}
+        </div>
+        <p className="note" style={{ marginTop: 9 }}>
+          기분따라 바꿔 쓰세요. 이 기기에서만 바뀌고 다른 사람 화면은 그대로예요.
+        </p>
+      </div>
+      <div className="sec">💰 공금 예산</div>
       <div className="box" style={{ marginBottom: 10 }}>
         {budgets.map((b) => (
           <div className="tr" key={b.id}>
@@ -137,7 +165,7 @@ export function SettingsTab() {
 
       {currencies.length > 0 && (
         <>
-        <div className="sec">환율 · 원화 기준</div>
+        <div className="sec">💱 환율 · 원화 기준</div>
         <p className="note" style={{ marginBottom: 10 }}>
           이 여행에 설정된 통화를 한 번에 조회해서 날짜별로 저장해둬요. 직접 적으면 그 값이 우선이에요.
           내역에서 외화·원화를 둘 다 입력하면 그 건은 실제 청구 환율로 잡혀요.
@@ -169,7 +197,7 @@ export function SettingsTab() {
           {rateBusy ? '조회 중...' : `오늘(${defaultRateDate}) 환율 일괄 조회`}
         </button>
 
-        <div className="sec">환율 직접 입력</div>
+        <div className="sec">✍️ 환율 직접 입력</div>
         {currencies.map((c) => (
           <div className="row2" style={{ marginBottom: 7 }} key={c}>
             <span className="k" style={{ flex: '0 0 42%', alignSelf: 'center', fontSize: 13 }}>
@@ -194,7 +222,7 @@ export function SettingsTab() {
 
       {error && <p className="err">{error}</p>}
 
-      <div className="sec">여행 정보</div>
+      <div className="sec">✈️ 여행 정보</div>
       <div className="box">
         <div className="tr"><span className="k">여행 이름</span><span className="v txt">{trip?.name}</span></div>
         <div className="tr"><span className="k">참여 코드</span><span className="v">{trip?.code}</span></div>
@@ -203,7 +231,7 @@ export function SettingsTab() {
         <div className="tr"><span className="k">내 이름</span><span className="v txt">{personName}</span></div>
       </div>
 
-      <div className="sec">참여자</div>
+      <div className="sec">🙋 참여자</div>
       <div className="box" style={{ marginBottom: 10 }}>
         {members.map((m) => {
           const isMe = m.id === member?.id
@@ -232,9 +260,9 @@ export function SettingsTab() {
               </span>
               <span className="v txt">
                 {isMe ? (
-                  <button className="x" onClick={() => { setNameDraft(m.personName); setEditingName(true); setMemberError(null) }}>이름 수정</button>
+                  <button className="act mine" onClick={() => { setNameDraft(m.personName); setEditingName(true); setMemberError(null) }}>이름 수정</button>
                 ) : (
-                  <button className="x" style={{ color: 'var(--rose)' }} onClick={() => handleDeactivate(m.id, m.personName)}>빼기</button>
+                  <button className="act warn" onClick={() => handleDeactivate(m.id, m.personName)}>빼기</button>
                 )}
               </span>
             </div>
@@ -258,7 +286,7 @@ export function SettingsTab() {
         입력할 때 이 자리에 그대로 이어져요 — 이름이 다르면 따로 생기니 철자를 맞춰주세요.
       </p>
 
-      <div className="sec">홈 화면에 앱처럼 두기</div>
+      <div className="sec">📱 홈 화면에 앱처럼 두기</div>
       <div className="box" style={{ padding: '14px 15px', marginBottom: 10 }}>
         <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 10 }}>아이폰 (Safari)</div>
         <ol className="steps">
@@ -281,7 +309,7 @@ export function SettingsTab() {
         홈 화면에 설치하면 앱처럼 아이콘으로 바로 열 수 있어요.
       </p>
 
-      <div className="sec">캡쳐로 바로 기록하기</div>
+      <div className="sec">📸 캡쳐로 바로 기록하기</div>
       <div className="box" style={{ padding: '14px 15px' }}>
         <p className="note" style={{ margin: 0 }}>
           <b>갤럭시(안드로이드)</b>: 카드 결제 캡쳐를 찍고 공유 버튼을 누르면 공유 대상 목록에 이 앱이 떠요. 앱을 고르면 캡쳐 → 공유만으로 자동 분석까지 끝나요.
@@ -291,7 +319,7 @@ export function SettingsTab() {
         </p>
       </div>
 
-      <div className="sec">다른 여행</div>
+      <div className="sec">🔄 다른 여행</div>
       <button className="btn quiet" onClick={switchTrip}>다른 여행 코드로 전환</button>
       <p className="note" style={{ marginTop: 9 }}>
         새 코드를 입력하면 그 여행으로 이동해요. 지금 코드를 다시 입력하면 이 여행으로 돌아올 수 있어요.

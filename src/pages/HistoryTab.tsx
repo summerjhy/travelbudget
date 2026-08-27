@@ -11,7 +11,6 @@ import { CATEGORIES } from '../lib/categories'
 import { currencyChip, currencyLabel, currencySuffix } from '../lib/currencies'
 import { BASE_CURRENCY, summaryCurrency, tripCurrencies } from '../lib/tripCurrency'
 import { PAYMENT_METHODS, paymentLabel } from '../lib/payment'
-import { won } from '../lib/format'
 import { Pair } from '../components/Pair'
 
 interface Draft {
@@ -167,7 +166,7 @@ export function HistoryTab() {
 
   return (
     <section className="pad">
-      <div className="sec first">합계</div>
+      <div className="sec first">📊 합계</div>
       <div className="box">
         <div className="tr"><span className="k">공금 · {totals.fund.n}건</span><span className="v"><Pair amount={totals.fund.cny} krw={totals.fund.krw} currency={summary} /></span></div>
         <div className="tr"><span className="k">개인 합계</span><span className="v"><Pair amount={totals.personCny} krw={totals.personKrw} currency={summary} /></span></div>
@@ -175,22 +174,29 @@ export function HistoryTab() {
         <div className="tr"><span className="k">잔여 예산</span><span className="v" style={{ fontWeight: 600 }}><Pair amount={totals.remainCny} krw={totals.remain} currency={summary} /></span></div>
       </div>
 
-      <div className="sec">필터</div>
-      <div className="chips" style={{ marginBottom: 8 }}>
-        <button className={'chip' + (categoryFilter === null ? ' on' : '')} onClick={() => setCategoryFilter(null)}>전체</button>
-        {categories.map((c) => (
-          <button key={c} className={'chip' + (categoryFilter === c ? ' on' : '')} onClick={() => setCategoryFilter(c)}>{c}</button>
-        ))}
-      </div>
-      <div className="chips">
-        <button className={'chip' + (memberFilter === 'ALL' ? ' on' : '')} onClick={() => setMemberFilter('ALL')}>전체</button>
-        <button className={'chip' + (memberFilter === null ? ' on' : '')} onClick={() => setMemberFilter(null)}>공금</button>
-        {members.map((m) => (
-          <button key={m.id} className={'chip' + (memberFilter === m.id ? ' on' : '')} onClick={() => setMemberFilter(m.id)}>{m.personName}</button>
-        ))}
+      <div className="filters">
+        <div className="fgroup">
+          <span className="flab">분류</span>
+          <div className="chips">
+            <button className={'chip' + (categoryFilter === null ? ' on' : '')} onClick={() => setCategoryFilter(null)}>전체</button>
+            {categories.map((c) => (
+              <button key={c} className={'chip' + (categoryFilter === c ? ' on' : '')} onClick={() => setCategoryFilter(c)}>{c}</button>
+            ))}
+          </div>
+        </div>
+        <div className="fgroup">
+          <span className="flab">누가</span>
+          <div className="chips">
+            <button className={'chip' + (memberFilter === 'ALL' ? ' on' : '')} onClick={() => setMemberFilter('ALL')}>전체</button>
+            <button className={'chip fund' + (memberFilter === null ? ' on' : '')} onClick={() => setMemberFilter(null)}>공금</button>
+            {members.map((m) => (
+              <button key={m.id} className={'chip' + (memberFilter === m.id ? ' on' : '')} onClick={() => setMemberFilter(m.id)}>{m.personName}</button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <div className="sec">전체 내역 · {filtered.length}건</div>
+      <div className="sec">🧾 전체 내역 · {filtered.length}건</div>
       <p className="note" style={{ margin: '-4px 0 10px' }}>항목을 누르면 이름 · 금액 · 날짜를 고칠 수 있어요.</p>
 
       {error && <p className="err">{error}</p>}
@@ -284,7 +290,7 @@ export function HistoryTab() {
                     ))}
                   </div>
                   <div className="chips">
-                    <button className={'chip' + (draft.memberId === null ? ' on' : '')} onClick={() => setDraft({ ...draft, memberId: null })}>공금</button>
+                    <button className={'chip fund' + (draft.memberId === null ? ' on' : '')} onClick={() => setDraft({ ...draft, memberId: null })}>공금</button>
                     {members.map((m) => (
                       <button key={m.id} className={'chip' + (draft.memberId === m.id ? ' on' : '')} onClick={() => setDraft({ ...draft, memberId: m.id })}>
                         {m.personName}
@@ -314,7 +320,7 @@ export function HistoryTab() {
             // 원화 건은 환산이 없으므로 환율을 보여줄 게 없다.
             const shownRate =
               e.rate !== null && entryCurrency(e) !== BASE_CURRENCY
-                ? `1${entryCurrency(e)}=${won(e.rate)}`
+                ? `1${entryCurrency(e)}=₩${e.rate.toFixed(2)}`
                 : null
             return (
               <div className="item" key={e.id} onClick={() => openEdit(e)}>
