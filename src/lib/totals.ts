@@ -37,16 +37,36 @@ export function computeTotals(
   const perMember: Record<string, MoneyTotal> = {}
   for (const m of members) perMember[m.id] = { krw: 0, cny: 0, n: 0 }
 
+  // member_id 가 있으면 개인 지출이다. 그 사람이 members 에 아직 없더라도
+  // (목록이 늦게 로드됐거나 비활성화됐더라도) 절대 공금으로 넘기지 않는다.
+  // 예전에는 fund 로 흘려보내서 예산 게이지가 개인 지출까지 먹었다.
+  const person: MoneyTotal = { krw: 0, cny: 0, n: 0 }
+
   for (const e of entries) {
-    const bucket = e.member_id && perMember[e.member_id] ? perMember[e.member_id] : fund
-    bucket.krw += Number(e.krw)
-    if (currency && entryCurrency(e) === currency) bucket.cny += Number(e.cny)
-    bucket.n += 1
+    const inCurrency = !!currency && entryCurrency(e) === currency
+    if (e.member_id === null) {
+      fund.krw += Number(e.krw)
+      if (inCurrency) fund.cny += Number(e.cny)
+      fund.n += 1
+      continue
+    }
+    person.krw += Number(e.krw)
+    if (inCurrency) person.cny += Number(e.cny)
+    person.n += 1
+
+    // 목록에 있는 멤버만 per-member 칸에 쌓는다. 없으면 개인 합계에만 들어간다.
+    const bucket = perMember[e.member_id]
+    if (bucket) {
+      bucket.krw += Number(e.krw)
+      if (inCurrency) bucket.cny += Number(e.cny)
+      bucket.n += 1
+    }
   }
 
+  // 예산과 잔여는 공금만 본다. 개인 지출은 각자 돈이라 공금 예산과 무관하다.
   const remain = budget - fund.krw
-  const personKrw = members.reduce((sum, m) => sum + (perMember[m.id]?.krw ?? 0), 0)
-  const personCny = members.reduce((sum, m) => sum + (perMember[m.id]?.cny ?? 0), 0)
+  const personKrw = person.krw
+  const personCny = person.cny
 
   return {
     fund,
