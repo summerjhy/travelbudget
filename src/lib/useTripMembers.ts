@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from './supabase'
 import type { Person, TripMember } from './types'
+import { withEmoji } from './memberEmoji'
 
 export interface MemberWithName extends TripMember {
   personName: string
+  /** 이모지 + 이름. 화면에 사람 이름을 쓸 때는 항상 이걸 쓴다. */
+  displayName: string
 }
 
 export const MAX_NAME_LENGTH = 10
@@ -38,6 +41,7 @@ export function useTripMembers(tripId: string | undefined) {
         data.map((m: TripMember & { person: Person }) => ({
           ...m,
           personName: m.person?.name ?? '',
+          displayName: withEmoji(m.emoji, m.person?.name ?? ''),
         })),
       )
     }
@@ -56,7 +60,7 @@ export function useTripMembers(tripId: string | undefined) {
    * TripContext.loadMember 가 이 행을 찾아 그대로 붙으므로 중복이 생기지 않는다.
    * 그래서 이름 표기가 어긋나지 않게 trim 과 중복 검사를 꼭 거친다.
    */
-  async function addMember(rawName: string): Promise<{ ok: boolean; error?: string }> {
+  async function addMember(rawName: string, emoji = ''): Promise<{ ok: boolean; error?: string }> {
     if (!tripId) return { ok: false, error: '여행 정보가 없어요.' }
     const v = validateName(rawName)
     if (!v.ok) return v
@@ -74,9 +78,17 @@ export function useTripMembers(tripId: string | undefined) {
 
     const { error: memberError } = await supabase
       .from('trip_members')
-      .insert({ trip_id: tripId, person_id: person.id, sort: allMembers.length })
+      .insert({ trip_id: tripId, person_id: person.id, sort: allMembers.length, emoji })
     if (memberError) return { ok: false, error: '참여자 추가에 실패했어요.' }
 
+    await refresh()
+    return { ok: true }
+  }
+
+  /** 참여자 이모지만 바꾼다. 이름과 달리 people 을 건드리지 않는다. */
+  async function setMemberEmoji(memberId: string, emoji: string): Promise<{ ok: boolean; error?: string }> {
+    const { error } = await supabase.from('trip_members').update({ emoji }).eq('id', memberId)
+    if (error) return { ok: false, error: '이모지 저장에 실패했어요.' }
     await refresh()
     return { ok: true }
   }
@@ -99,5 +111,5 @@ export function useTripMembers(tripId: string | undefined) {
     return { ok: true }
   }
 
-  return { members, allMembers, loading, refresh, addMember, deactivateMember, reactivateMember }
+  return { members, allMembers, loading, refresh, addMember, setMemberEmoji, deactivateMember, reactivateMember }
 }

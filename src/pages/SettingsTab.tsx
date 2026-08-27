@@ -11,11 +11,13 @@ import { ExportPanel } from '../components/ExportPanel'
 import { BudgetPanel } from '../components/BudgetPanel'
 import { ShareTripButton } from '../components/ShareTripButton'
 import { Collapsible } from '../components/Collapsible'
+import { EmojiPicker } from '../components/EmojiPicker'
+import { withEmoji } from '../lib/memberEmoji'
 import { todayForTrip } from '../lib/tripDate'
 
 export function SettingsTab() {
-  const { trip, personName, member, switchTrip, renameMe } = useTrip()
-  const { members, allMembers, refresh: refreshMembers, addMember, deactivateMember } = useTripMembers(trip?.id)
+  const { trip, member, switchTrip, renameMe } = useTrip()
+  const { members, allMembers, refresh: refreshMembers, addMember, setMemberEmoji, deactivateMember } = useTripMembers(trip?.id)
   const { rates, setManualRate, fetchNow } = useRates(trip?.id, trip?.code)
   const { budgets, total, addBudget, updateBudget, removeBudget } = useBudgets(trip?.id)
   const { entries } = useEntries(trip?.id)
@@ -27,6 +29,7 @@ export function SettingsTab() {
   const [newMemberName, setNewMemberName] = useState('')
   const [editingName, setEditingName] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
+  const [emojiDraft, setEmojiDraft] = useState('')
   const [memberError, setMemberError] = useState<string | null>(null)
   const [theme, setTheme] = useState<ThemeCode>(getStoredTheme)
 
@@ -51,6 +54,15 @@ export function SettingsTab() {
 
   async function handleSaveMyName() {
     setMemberError(null)
+    // 이모지는 trip_members 에만 있어 이름과 저장 경로가 다르다.
+    // 이모지를 먼저 넣어야 이름 변경 후 refresh 결과에 함께 반영된다.
+    if (member && emojiDraft !== member.emoji) {
+      const e = await setMemberEmoji(member.id, emojiDraft)
+      if (!e.ok) {
+        setMemberError(e.error ?? '이모지 저장에 실패했어요.')
+        return
+      }
+    }
     const result = await renameMe(nameDraft)
     if (!result.ok) {
       setMemberError(result.error ?? '이름 변경에 실패했어요.')
@@ -106,7 +118,6 @@ export function SettingsTab() {
         <div className="tr"><span className="k">참여 코드</span><span className="v">{trip?.code}</span></div>
         <div className="tr"><span className="k">목적지</span><span className="v txt">{trip?.destinations?.length ? trip.destinations.join(' · ') : '미지정'}</span></div>
         <div className="tr"><span className="k">사용 통화</span><span className="v txt">{trip?.spend_currencies?.join(' · ') || '-'}</span></div>
-        <div className="tr"><span className="k">내 이름</span><span className="v txt">{personName}</span></div>
       </div>
 
       <div className="sec">🙋 참여자</div>
@@ -115,32 +126,40 @@ export function SettingsTab() {
           const isMe = m.id === member?.id
           if (isMe && editingName) {
             return (
-              <div className="tr" key={m.id}>
-                <input
-                  className="inp"
-                  autoFocus
-                  maxLength={MAX_NAME_LENGTH}
-                  value={nameDraft}
-                  onChange={(e) => setNameDraft(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleSaveMyName() }}
-                  style={{ flex: 1, marginRight: 6 }}
-                />
-                <button className="btn sm" style={{ width: 58 }} onClick={handleSaveMyName}>저장</button>
-                <button className="x" style={{ marginLeft: 6 }} onClick={() => setEditingName(false)}>취소</button>
+              <div key={m.id} style={{ padding: '12px 14px', borderBottom: '1px solid var(--line)' }}>
+                <EmojiPicker value={emojiDraft} onChange={setEmojiDraft} label="나를 표현하는 이모지" />
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <input
+                    className="inp"
+                    autoFocus
+                    maxLength={MAX_NAME_LENGTH}
+                    value={nameDraft}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleSaveMyName() }}
+                    style={{ flex: 1 }}
+                  />
+                  <button className="btn sm" style={{ width: 58 }} onClick={handleSaveMyName}>저장</button>
+                  <button className="x" onClick={() => setEditingName(false)}>취소</button>
+                </div>
+                {nameDraft.trim() && (
+                  <p className="note" style={{ marginTop: 7 }}>
+                    이렇게 보여요 — <b>{withEmoji(emojiDraft, nameDraft.trim())}</b>
+                  </p>
+                )}
               </div>
             )
           }
           return (
             <div className="tr" key={m.id}>
               <span className="k">
-                {m.personName}
+                {m.displayName}
                 {isMe && <span style={{ color: 'var(--jade)' }}> · 나</span>}
               </span>
               <span className="v txt">
                 {isMe ? (
-                  <button className="act mine" onClick={() => { setNameDraft(m.personName); setEditingName(true); setMemberError(null) }}>이름 수정</button>
+                  <button className="act mine" onClick={() => { setNameDraft(m.personName); setEmojiDraft(m.emoji); setEditingName(true); setMemberError(null) }}>내 이름 바꾸기</button>
                 ) : (
-                  <button className="act warn" onClick={() => handleDeactivate(m.id, m.personName)}>빼기</button>
+                  <button className="act warn" onClick={() => handleDeactivate(m.id, m.displayName)}>빼기</button>
                 )}
               </span>
             </div>
@@ -160,8 +179,8 @@ export function SettingsTab() {
       </div>
       {memberError && <p className="err">{memberError}</p>}
       <p className="note" style={{ marginTop: 9 }}>
-        이름은 본인 것만 고칠 수 있어요. 미리 추가해두면 그 사람이 접속해서 같은 이름을
-        입력할 때 이 자리에 그대로 이어져요 — 이름이 다르면 따로 생기니 철자를 맞춰주세요.
+        이름은 본인의 것만 수정 가능해요. 접속할 때 매번 같은 이름을 입력해야
+        데이터의 정확도가 높아져요.
       </p>
 
       <div className="sec">💰 공금 예산</div>
@@ -245,9 +264,11 @@ export function SettingsTab() {
       )}
 
       <div className="sec">🔄 다른 여행</div>
-      <button className="btn quiet" onClick={switchTrip}>다른 여행 코드로 전환</button>
+      <button className="btn quiet" onClick={switchTrip}>다른 여행으로 이동하기</button>
       <p className="note" style={{ marginTop: 9 }}>
-        새 코드를 입력하면 그 여행으로 이동해요. 지금 코드를 다시 입력하면 이 여행으로 돌아올 수 있어요.
+        이 버튼을 클릭하면 초기 화면으로 돌아가서 다른 여행에 참여할 수 있어요.
+        다른 여행의 코드를 알고 있어야 참여할 수 있고, 지금 이 여행의 코드(<b>{trip?.code}</b>)를
+        다시 입력하면 이 여행으로 돌아올 수 있어요.
       </p>
 
 
@@ -284,8 +305,8 @@ export function SettingsTab() {
             <ol className="steps">
               <li>카톡에서 링크를 연 뒤 <b>다른 브라우저로 열기 → Chrome</b></li>
               <li>오른쪽 위 <b>⋮</b> 탭</li>
-              <li><b>홈 화면에 추가</b> 선택</li>
-              <li><b>설치</b> 또는 <b>추가</b> 누르기</li>
+              <li><b>설치 및 바로가기 만들기</b> 선택</li>
+              <li>앱 설치가 완료되면 홈 화면에 추가하기</li>
             </ol>
             <p className="note" style={{ marginTop: 9 }}>
               홈 화면에 설치하면 앱처럼 아이콘으로 바로 열 수 있어요.
@@ -297,8 +318,8 @@ export function SettingsTab() {
               앱을 고르면 캡쳐 → 공유만으로 자동 분석까지 끝나요.
             </p>
             <p className="note" style={{ margin: '9px 0 0' }}>
-              목록에 안 보이면 홈 화면 아이콘을 지우고 다시 설치해주세요.
-              공유 기능은 설치할 때 등록돼요.
+              목록에 여행가계부 앱이 보이지 않는 경우, <b>더보기</b>를 눌러 애플리케이션 중
+              여행가계부 앱을 추가한 뒤 다시 시도해주세요.
             </p>
         </Collapsible>
       </Collapsible>

@@ -392,7 +392,7 @@ export function RecordTab() {
                 className={'chip' + (activePayer === m.id ? ' on' : '')}
                 onClick={() => pickPayer(m.id)}
               >
-                {m.personName}
+                {m.displayName}
               </button>
             ))}
           </div>
@@ -491,7 +491,7 @@ export function RecordTab() {
                       className={'chip' + (p.memberId === m.id ? ' on' : '')}
                       onClick={() => updatePreviewItem(i, { memberId: m.id, personName: m.personName })}
                     >
-                      {m.personName}
+                      {m.displayName}
                     </button>
                   ))}
                 </div>
@@ -539,7 +539,7 @@ export function RecordTab() {
       <div className="box">
         {members.map((m) => (
           <div className="tr" key={m.id}>
-            <span className="k">{m.personName}</span>
+            <span className="k">{m.displayName}</span>
             <span className="v"><Pair amount={totals.perMember[m.id]?.cny ?? 0} krw={totals.perMember[m.id]?.krw ?? 0} currency={summary} /></span>
           </div>
         ))}
