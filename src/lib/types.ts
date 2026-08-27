@@ -5,6 +5,8 @@ export interface Trip {
   start_date: string
   end_date: string | null
   destinations: string[]
+  /** IANA 시간대. 목적지 나라에서 정해진다. '오늘' 판정 기준. */
+  tz: string
   base_currency: string
   spend_currencies: string[]
   created_at: string

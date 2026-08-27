@@ -5,6 +5,8 @@ export interface TripName {
   trip_id: string
   name: string
   created_at: string
+  /** 서버가 목적지 시간대로 계산해 붙인다. 날짜 자체는 내려오지 않는다. */
+  phase?: 'ongoing' | 'upcoming' | 'ended'
 }
 
 /**
@@ -21,8 +23,9 @@ export function useTripNames() {
   useEffect(() => {
     let alive = true
     supabase
-      .from('trip_names')
-      .select('trip_id, name, created_at')
+      // trip_list 뷰: 이름 + 진행 상태만. 날짜·코드는 안 내려온다 (마이그레이션 0008).
+      .from('trip_list')
+      .select('trip_id, name, created_at, phase')
       .order('created_at', { ascending: false })
       .then(({ data, error }) => {
         if (!alive) return

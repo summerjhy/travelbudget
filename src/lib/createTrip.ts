@@ -8,6 +8,7 @@ export interface CreateTripInput {
   startDate: string
   endDate?: string
   destinations?: string[]
+  tz?: string
   baseCurrency?: string
   spendCurrencies?: string[]
 }

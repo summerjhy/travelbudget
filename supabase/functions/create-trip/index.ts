@@ -13,6 +13,7 @@ interface CreateTripBody {
   startDate: string
   endDate?: string
   destinations?: string[]
+  tz?: string
   baseCurrency?: string
   spendCurrencies?: string[]
 }
@@ -68,6 +69,7 @@ Deno.serve(async (req: Request) => {
       start_date: body.startDate,
       end_date: body.endDate ?? null,
       destinations: body.destinations ?? [],
+      tz: body.tz || 'Asia/Seoul',
       base_currency: body.baseCurrency ?? 'KRW',
       spend_currencies: body.spendCurrencies ?? ['CNY'],
     })

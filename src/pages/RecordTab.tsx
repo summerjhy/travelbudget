@@ -27,6 +27,7 @@ import { parseImages } from '../lib/parseImage'
 import { consumeSharedFiles, takeShareFlag } from '../lib/shareTarget'
 import { Pair } from '../components/Pair'
 import type { Entry } from '../lib/types'
+import { todayForTrip, yearForTrip } from '../lib/tripDate'
 
 interface PreviewItem extends ParsedEntry {
   memberId: string | null
@@ -35,10 +36,6 @@ interface PreviewItem extends ParsedEntry {
 }
 
 const MAX_PHOTOS = 5
-
-function todayDate(): string {
-  return new Date().toISOString().slice(0, 10)
-}
 
 export function RecordTab() {
   const { trip, personName, member } = useTrip()
@@ -133,7 +130,7 @@ export function RecordTab() {
 
   function handleParse() {
     setError(null)
-    const year = trip?.start_date.slice(0, 4) ?? String(new Date().getFullYear())
+    const year = trip?.start_date.slice(0, 4) ?? yearForTrip(trip)
     const parsed = parseText(text, memberNames, year, parserConfig(currencies, activeCurrency))
     if (!parsed.length) {
       setError('금액을 못 찾았어요. 숫자를 포함해서 적어 주세요.')
@@ -146,7 +143,7 @@ export function RecordTab() {
         ...p,
         memberId: members.find((m) => m.personName === p.personName)?.id ?? null,
         paymentMethod: activePayment,
-        date: p.date ?? todayDate(),
+        date: p.date ?? todayForTrip(trip),
         entrySource: 'text' as const,
       })),
     ])
@@ -177,7 +174,7 @@ export function RecordTab() {
         return
       }
 
-      const defaultDate = todayDate()
+      const defaultDate = todayForTrip(trip)
       const newItems: PreviewItem[] = []
       let failCount = 0
       for (const r of result.results) {
@@ -231,11 +228,11 @@ export function RecordTab() {
     // 저장에 필요한 (날짜, 통화) 중 캐시에 없는 게 있으면 그 날짜를 한 번 조회한다.
     // fetch-rate 는 여행의 외화를 한꺼번에 돌려주므로 날짜당 한 번이면 충분하다.
     const saved = preview.filter((p) => p.amount > 0)
-    const neededDates = Array.from(new Set(saved.map((p) => p.date ?? todayDate())))
+    const neededDates = Array.from(new Set(saved.map((p) => p.date ?? todayForTrip(trip))))
     const table: RateTable = { ...rates }
     for (const date of neededDates) {
       const missing = saved
-        .filter((p) => (p.date ?? todayDate()) === date)
+        .filter((p) => (p.date ?? todayForTrip(trip)) === date)
         .some((p) => rateFor(table, date, p.currency) === null)
       if (!missing) continue
 
@@ -247,7 +244,7 @@ export function RecordTab() {
       // 오프라인 등으로 조회가 안 된 통화는 그 통화의 가장 최근 캐시 환율로 버틴다.
       // 온라인 복귀 후 정확한 환율이 필요하면 내역 탭에서 고칠 수 있다.
       for (const p of saved) {
-        if ((p.date ?? todayDate()) !== date) continue
+        if ((p.date ?? todayForTrip(trip)) !== date) continue
         if (rateFor(table, date, p.currency) !== null) continue
         const fallback = latestRateFor(rates, p.currency)
         if (fallback) table[date] = { ...(table[date] ?? {}), [p.currency]: fallback }
@@ -256,7 +253,7 @@ export function RecordTab() {
 
     const items: NewEntryInput[] = []
     for (const p of saved) {
-      const date = p.date ?? todayDate()
+      const date = p.date ?? todayForTrip(trip)
       const isKRW = p.currency === BASE_CURRENCY
       const resolved = resolveAmount(
         { krw: isKRW ? p.amount : undefined, cny: isKRW ? undefined : p.amount },
