@@ -25,7 +25,7 @@ export function TripLayout() {
     <div className="wrap">
       <header className="head">
         <div className="headrow">
-          <h1 className="title">{trip?.name} ✨</h1>
+          <h1 className="title">{trip?.name}</h1>
           <div className="eyebrow">{trip?.code}</div>
         </div>
         <div className="remain">
