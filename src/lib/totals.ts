@@ -12,6 +12,8 @@ export interface Totals {
   fund: MoneyTotal
   perMember: Record<string, MoneyTotal>
   budget: number
+  /** 예산 총액을 외화로 환산한 값. summaryCurrency 가 null(외화 둘 이상)이면 0. */
+  budgetCny: number
   remain: number
   remainCny: number
   pct: number
@@ -72,6 +74,7 @@ export function computeTotals(
     fund,
     perMember,
     budget,
+    budgetCny: currency && latestRate ? budget / latestRate : 0,
     remain,
     remainCny: currency && latestRate ? remain / latestRate : 0,
     pct: budget ? (fund.krw / budget) * 100 : 0,
