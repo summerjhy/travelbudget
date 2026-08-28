@@ -17,7 +17,10 @@ interface GeminiParsedResult {
   amount: number | null
   currency: string | null
   date: string | null
+  time: string | null
 }
+
+const MAX_ITEMS_PER_IMAGE = 20
 
 function jsonResponse(body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
@@ -32,7 +35,7 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-async function callGeminiOnce(apiKey: string, imageBase64: string): Promise<{ result: GeminiParsedResult | null; status?: number }> {
+async function callGeminiOnce(apiKey: string, imageBase64: string): Promise<{ result: GeminiParsedResult[] | null; status?: number }> {
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
     {
@@ -67,17 +70,22 @@ async function callGeminiOnce(apiKey: string, imageBase64: string): Promise<{ re
     return { result: null }
   }
 
+  let parsed: unknown
   try {
-    return { result: JSON.parse(text) }
+    parsed = JSON.parse(text)
   } catch {
     console.error('Gemini response text is not valid JSON', text)
     return { result: null }
   }
+
+  // 스키마는 항상 배열이지만, 혹시 모델이 단일 객체로 응답하면 배열로 감싸 방어한다.
+  const list = Array.isArray(parsed) ? parsed : [parsed]
+  return { result: list.slice(0, MAX_ITEMS_PER_IMAGE) as GeminiParsedResult[] }
 }
 
 // 503(일시적 과부하)만 1회 재시도한다. 429(할당량 초과)는 재시도하지 않고 그 사진만 실패 처리한다.
 // 여러 장을 병렬로 보내므로, 한 장의 429/503이 다른 장의 처리를 막지 않는다.
-async function callGemini(apiKey: string, imageBase64: string): Promise<GeminiParsedResult | null> {
+async function callGemini(apiKey: string, imageBase64: string): Promise<GeminiParsedResult[] | null> {
   const first = await callGeminiOnce(apiKey, imageBase64)
   if (first.result !== null || first.status !== 503) return first.result
 

@@ -34,6 +34,8 @@ interface PreviewItem extends ParsedEntry {
   memberId: string | null
   paymentMethod: string
   entrySource: Entry['source']
+  /** HH:MM. 사진에서 시각까지 읽었으면 채워진다. 없으면 저장 시각으로 채운다. */
+  time: string | null
 }
 
 const MAX_PHOTOS = 5
@@ -146,6 +148,7 @@ export function RecordTab() {
         paymentMethod: activePayment,
         date: p.date ?? todayForTrip(trip),
         entrySource: 'text' as const,
+        time: null,
       })),
     ])
   }
@@ -178,31 +181,40 @@ export function RecordTab() {
       const defaultDate = todayForTrip(trip)
       const newItems: PreviewItem[] = []
       let failCount = 0
-      for (const r of result.results) {
-        if (!r || (r.krw === null && r.amount === null)) {
+      // 사진 한 장이 목록형 이용내역이면 거래가 여러 건 나올 수 있다 —
+      // 각 사진의 결과 배열을 펼쳐서 항목마다 미리보기 카드를 하나씩 만든다.
+      for (const list of result.results) {
+        if (!list || list.length === 0) {
           failCount++
           continue
         }
-        // 캡쳐에서 읽은 통화 코드가 이 여행에서 쓰는 통화면 그대로 쓰고,
-        // 아니면(못 읽었거나 낯선 코드) 지금 고른 단위로 넘긴다.
-        const read = r.currency?.toUpperCase() ?? null
-        const isKRW = read ? read === BASE_CURRENCY : r.krw !== null && r.amount === null
-        const itemCurrency = isKRW
-          ? BASE_CURRENCY
-          : read && currencies.includes(read)
-            ? read
-            : activeCurrency
-        newItems.push({
-          title: r.merchant || '지출',
-          category: guessCategory(r.merchant || ''),
-          personName: null,
-          memberId: null,
-          paymentMethod: activePayment,
-          date: r.date ?? defaultDate,
-          amount: isKRW ? (r.krw ?? 0) : (r.amount ?? 0),
-          currency: itemCurrency,
-          entrySource: 'image',
-        })
+        let addedFromThisImage = 0
+        for (const r of list) {
+          if (r.krw === null && r.amount === null) continue
+          addedFromThisImage++
+          // 캡쳐에서 읽은 통화 코드가 이 여행에서 쓰는 통화면 그대로 쓰고,
+          // 아니면(못 읽었거나 낯선 코드) 지금 고른 단위로 넘긴다.
+          const read = r.currency?.toUpperCase() ?? null
+          const isKRW = read ? read === BASE_CURRENCY : r.krw !== null && r.amount === null
+          const itemCurrency = isKRW
+            ? BASE_CURRENCY
+            : read && currencies.includes(read)
+              ? read
+              : activeCurrency
+          newItems.push({
+            title: r.merchant || '지출',
+            category: guessCategory(r.merchant || ''),
+            personName: null,
+            memberId: null,
+            paymentMethod: activePayment,
+            date: r.date ?? defaultDate,
+            amount: isKRW ? (r.krw ?? 0) : (r.amount ?? 0),
+            currency: itemCurrency,
+            entrySource: 'image',
+            time: r.time,
+          })
+        }
+        if (addedFromThisImage === 0) failCount++
       }
       setPreview((prev) => [...prev, ...newItems])
       if (failCount > 0) {
@@ -252,8 +264,9 @@ export function RecordTab() {
       }
     }
 
-    // 한 번의 저장 동작 안에서는 다 같이 지금 입력한 것이므로 시각도 하나로 맞춘다.
-    const time = nowForTrip(trip)
+    // 사진에서 실제 결제 시각을 읽었으면 그 값을 쓰고, 못 읽었으면(텍스트
+    // 입력 등) 한 번의 저장 동작 안에서는 다 같이 지금 입력한 것으로 본다.
+    const fallbackTime = nowForTrip(trip)
     const items: NewEntryInput[] = []
     for (const p of saved) {
       const date = p.date ?? todayForTrip(trip)
@@ -279,7 +292,7 @@ export function RecordTab() {
         rate: resolved.rate,
         source: p.entrySource,
         created_by: personName,
-        time,
+        time: p.time ?? fallbackTime,
       })
     }
 
@@ -446,6 +459,12 @@ export function RecordTab() {
                     onChange={(e) => updatePreviewItem(i, { amount: parseFloat(e.target.value) || 0 })}
                   />
                 </div>
+                {(p.date || p.time) && (
+                  <p className="note" style={{ margin: '-5px 0 7px' }}>
+                    📅 {(p.date ?? todayForTrip(trip)).slice(5).replace('-', '/')}
+                    {p.time ? ` ${p.time}` : ''}
+                  </p>
+                )}
                 <div className="chips">
                   {currencies.map((c) => (
                     <button
