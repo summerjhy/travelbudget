@@ -557,9 +557,11 @@ export function RecordTab() {
       {preview.length > 0 && (
         <div>
           <div className="sec">✅ 확인하고 저장</div>
+          <p className="note" style={{ margin: '-4px 0 9px' }}>총 {preview.length}건 입력됐어요.</p>
           {preview.map((p, i) => (
             <div className="prev" key={i}>
               <div className="l1">
+                <span className="idxnum" aria-hidden="true">{i + 1}</span>
                 <input value={p.title} onChange={(e) => updatePreviewItem(i, { title: e.target.value })} />
                 <button
                   className="btn warn sm"

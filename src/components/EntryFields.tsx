@@ -3,7 +3,6 @@ import { currencyChip, currencyLabel, currencyNeedsSpace, currencySuffix } from 
 import { formatAmountInput, stripAmountInput } from '../lib/format'
 import { BASE_CURRENCY } from '../lib/tripCurrency'
 import { PAYMENT_METHODS, paymentChip } from '../lib/payment'
-import { MemberName } from './MemberName'
 import type { MemberWithName } from '../lib/useTripMembers'
 
 export interface EntryFieldsValue {
@@ -27,6 +26,12 @@ export interface EntryFieldsValue {
  * 기록 탭의 저장 전 미리보기 카드와 내역 탭의 수정 카드가 똑같이 쓰는
  * 필드 묶음. 두 화면에서 손 감각이 갈리지 않도록 통화·금액·환율·분류·
  * 결제수단·결제자·비용구분·날짜/시각을 여기 한 곳에서만 그린다.
+ *
+ * 카테고리·결제수단·결제자·비용구분은 이미 파싱/기본값으로 골라져
+ * 있는 상태라, 전체 선택지를 칩으로 다 펼쳐 보일 필요가 없다 — 지금
+ * 고른 값만 드롭다운으로 보여주고 필요할 때만 바꾼다. 여러 건을 한
+ * 화면에서 검토할 때(미리보기) 카드 하나가 화면을 다 차지하던 문제를
+ * 이렇게 줄인다. 통화는 보통 1~2개뿐이라 칩으로 그대로 둔다.
  *
  * 제목 입력칸과 화면별로 다른 하단 버튼(빼기 vs 삭제/취소/저장)은
  * 이 컴포넌트 바깥, 각 페이지에서 그린다 — 의미가 서로 다르기 때문이다.
@@ -120,64 +125,56 @@ export function EntryFields({
         </>
       )}
 
-      <div className="chips" style={{ marginBottom: 8 }}>
-        <span className="deflab" style={{ flexBasis: '100%', marginBottom: 4 }}>🗂️ 카테고리</span>
-        {CATEGORY_NAMES.map((c) => (
-          <button
-            key={c}
-            className={'chip' + (value.category === c ? ' on' : '')}
-            onClick={() => onChange({ category: c })}
-          >
-            {categoryChip(c)}
-          </button>
-        ))}
+      <div className="fieldrow">
+        <span className="deflab">🗂️ 카테고리</span>
+        <select className="inp sel" value={value.category} onChange={(ev) => onChange({ category: ev.target.value })}>
+          {CATEGORY_NAMES.map((c) => (
+            <option key={c} value={c}>{categoryChip(c)}</option>
+          ))}
+        </select>
       </div>
 
-      <div className="chips" style={{ marginBottom: 8 }}>
+      <div className="fieldrow">
         <span className="deflab">💳 결제 수단</span>
-        {PAYMENT_METHODS.map((m) => (
-          <button
-            key={m.code}
-            className={'chip' + (value.paymentMethod === m.code ? ' on' : '')}
-            onClick={() => onChange({ paymentMethod: m.code })}
-          >
-            {paymentChip(m.code)}
-          </button>
-        ))}
+        <select
+          className="inp sel"
+          value={value.paymentMethod}
+          onChange={(ev) => onChange({ paymentMethod: ev.target.value })}
+        >
+          {PAYMENT_METHODS.map((m) => (
+            <option key={m.code} value={m.code}>{paymentChip(m.code)}</option>
+          ))}
+        </select>
       </div>
 
       {members.length > 0 && (
         <>
-          <div className="chips" style={{ marginBottom: 8 }}>
+          <div className="fieldrow">
             <span className="deflab">🙋 결제자</span>
-            {members.map((m) => (
-              <button
-                key={m.id}
-                className={'chip' + (value.paidBy === m.id ? ' on' : '')}
-                onClick={() => onChange({ paidBy: value.paidBy === m.id ? null : m.id })}
-              >
-                <MemberName emoji={m.emoji} name={m.personName} />
-              </button>
-            ))}
+            <select
+              className="inp sel"
+              value={value.paidBy ?? ''}
+              onChange={(ev) => onChange({ paidBy: ev.target.value || null })}
+            >
+              <option value="">미지정</option>
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>{m.emoji ? `${m.emoji} ${m.personName}` : m.personName}</option>
+              ))}
+            </select>
           </div>
 
-          <div className="chips" style={{ marginBottom: 8 }}>
+          <div className="fieldrow">
             <span className="deflab">🏷️ 비용 구분</span>
-            <button
-              className={'chip fund' + (value.memberId === null ? ' on' : '')}
-              onClick={() => onChange({ memberId: null })}
+            <select
+              className="inp sel"
+              value={value.memberId ?? ''}
+              onChange={(ev) => onChange({ memberId: ev.target.value || null })}
             >
-              공금
-            </button>
-            {members.map((m) => (
-              <button
-                key={m.id}
-                className={'chip' + (value.memberId === m.id ? ' on' : '')}
-                onClick={() => onChange({ memberId: m.id })}
-              >
-                {m.personName}
-              </button>
-            ))}
+              <option value="">공금</option>
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>{m.personName}</option>
+              ))}
+            </select>
           </div>
         </>
       )}

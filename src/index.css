@@ -1223,3 +1223,39 @@ input, select, textarea {
   justify-content: center;
   line-height: 1;
 }
+
+/* ------------------------------ 확정된 값 한 줄 선택 ------------------------------ */
+/* 카테고리·결제수단·결제자·비용구분처럼 이미 골라져 있는 값은 전체
+   선택지를 칩으로 펼치지 않고 지금 값 + 드롭다운 한 줄로 줄인다.
+   여러 건을 미리보기에서 한 번에 검토할 때 카드 하나가 화면을
+   다 잡아먹던 걸 이렇게 줄인다. */
+.fieldrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.fieldrow .deflab {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.fieldrow select {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 미리보기에서 여러 건을 검토할 때 몇 번째 건인지 표시하는 동그란 번호. */
+.idxnum {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--jade);
+  color: var(--accent-on);
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'IBM Plex Mono', monospace;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
