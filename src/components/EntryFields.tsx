@@ -128,7 +128,7 @@ export function EntryFields({
 
       <div className="deftable" style={{ margin: '9px 0' }}>
         <div className="defcell">
-          <span className="deflab">🗂️ 카테고리</span>
+          <span className="deflab">카테고리</span>
           <select className="inp sel" value={value.category} onChange={(ev) => onChange({ category: ev.target.value })}>
             {CATEGORY_NAMES.map((c) => (
               <option key={c} value={c}>{categoryChip(c)}</option>
