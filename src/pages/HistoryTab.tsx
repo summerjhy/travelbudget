@@ -7,15 +7,15 @@ import { useBudgets } from '../lib/useBudgets'
 import { usePolling } from '../lib/usePolling'
 import { latestRateFor, rateFor, resolveAmount } from '../lib/rates'
 import { computeTotals, entryCurrency } from '../lib/totals'
-import { CATEGORIES, CATEGORY_NAMES, categoryChip } from '../lib/categories'
-import { currencyChip, currencyLabel, currencyNeedsSpace, currencySuffix } from '../lib/currencies'
+import { CATEGORIES, categoryChip } from '../lib/categories'
 import { BASE_CURRENCY, summaryCurrency, tripCurrencies } from '../lib/tripCurrency'
-import { PAYMENT_METHODS, paymentChip } from '../lib/payment'
+import { paymentChip } from '../lib/payment'
 import { won } from '../lib/format'
 import { Pair } from '../components/Pair'
 import { ExportPanel } from '../components/ExportPanel'
 import { Help } from '../components/Help'
 import { MemberName } from '../components/MemberName'
+import { EntryFields } from '../components/EntryFields'
 
 interface Draft {
   title: string
@@ -202,11 +202,6 @@ export function HistoryTab() {
     if (!result.ok) setError(result.error ?? '삭제에 실패했어요.')
   }
 
-  const impliedRate =
-    draft && parseFloat(draft.krw) > 0 && parseFloat(draft.cny) > 0
-      ? parseFloat(draft.krw) / parseFloat(draft.cny)
-      : null
-
   return (
     <section className="pad">
       <div className="sec first">📊 합계</div>
@@ -300,115 +295,14 @@ export function HistoryTab() {
                       onChange={(ev) => setDraft({ ...draft, title: ev.target.value })}
                     />
                   </div>
-                  {currencies.length > 1 && (
-                    <div className="chips" style={{ marginBottom: 8 }}>
-                      {currencies.map((c) => (
-                        <button
-                          key={c}
-                          className={'chip' + (draft.currency === c ? ' on' : '')}
-                          onClick={() => setDraft({ ...draft, currency: c })}
-                          title={currencyLabel(c)}
-                        >
-                          {currencyChip(c)}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  <div className="money">
-                    {draft.currency !== BASE_CURRENCY && (
-                      <label>
-                        <input
-                          inputMode="decimal"
-                          value={draft.cny}
-                          onChange={(ev) => setDraft({ ...draft, cny: ev.target.value })}
-                          // 통화 기호가 없어 코드(USD, TWD 등 3글자)를 그대로 보여줄 때는
-                          // 기본 30px 여백으로 부족해 숫자와 글자가 겹친다.
-                          style={currencyNeedsSpace(draft.currency) ? { paddingRight: 52 } : undefined}
-                        />
-                        <span>{currencySuffix(draft.currency)}</span>
-                      </label>
-                    )}
-                    <label>
-                      <input inputMode="numeric" value={draft.krw} onChange={(ev) => setDraft({ ...draft, krw: ev.target.value })} />
-                      <span>원</span>
-                    </label>
-                  </div>
-                  {draft.currency !== BASE_CURRENCY && (
-                    <>
-                      <div className="money">
-                        <label>
-                          <input
-                            inputMode="decimal"
-                            value={draft.rate}
-                            placeholder="환율"
-                            onChange={(ev) => setDraft({ ...draft, rate: ev.target.value })}
-                            // "원/CNY" 처럼 접미사가 길어서 기본 30px 여백으로는 숫자와 겹친다.
-                            style={{ paddingRight: 64 }}
-                          />
-                          <span>원/{draft.currency}</span>
-                        </label>
-                        <button
-                          className="btn ghost sm"
-                          style={{ width: 'auto', flexShrink: 0 }}
-                          onClick={recalcRate}
-                        >
-                          이 날짜 환율로
-                        </button>
-                      </div>
-                      <p className="note" style={{ margin: '0 0 9px' }}>
-                        {impliedRate
-                          ? `적용환율 ${impliedRate.toFixed(2)} · 외화·원화를 둘 다 채우면 실제 청구 환율로 잡혀요`
-                          : '환율은 저장 당시 값으로 고정돼요. 고치려면 위 칸에 직접 적거나 버튼을 누르세요.'}
-                      </p>
-                    </>
-                  )}
-                  <div className="chips" style={{ marginBottom: 8 }}>
-                    {CATEGORY_NAMES.map((c) => (
-                      <button
-                        key={c}
-                        className={'chip' + (draft.category === c ? ' on' : '')}
-                        onClick={() => setDraft({ ...draft, category: c })}
-                      >
-                        {categoryChip(c)}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="chips" style={{ marginBottom: 8 }}>
-                    {PAYMENT_METHODS.map((m) => (
-                      <button
-                        key={m.code}
-                        className={'chip' + (draft.paymentMethod === m.code ? ' on' : '')}
-                        onClick={() => setDraft({ ...draft, paymentMethod: m.code })}
-                      >
-                        {paymentChip(m.code)}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="chips" style={{ marginBottom: 8 }}>
-                    <span className="note" style={{ marginRight: 4 }}>결제자</span>
-                    {members.map((m) => (
-                      <button
-                        key={m.id}
-                        className={'chip' + (draft.paidBy === m.id ? ' on' : '')}
-                        onClick={() => setDraft({ ...draft, paidBy: draft.paidBy === m.id ? null : m.id })}
-                      >
-                        <MemberName emoji={m.emoji} name={m.personName} />
-                      </button>
-                    ))}
-                  </div>
-                  <div className="chips" style={{ marginBottom: 8 }}>
-                    <span className="note" style={{ marginRight: 4 }}>비용 구분</span>
-                    <button className={'chip fund' + (draft.memberId === null ? ' on' : '')} onClick={() => setDraft({ ...draft, memberId: null })}>공금</button>
-                    {members.map((m) => (
-                      <button key={m.id} className={'chip' + (draft.memberId === m.id ? ' on' : '')} onClick={() => setDraft({ ...draft, memberId: m.id })}>
-                        {m.personName}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="editrow">
-                    <input className="inp" type="date" value={draft.date} onChange={(ev) => setDraft({ ...draft, date: ev.target.value })} style={{ flex: 1 }} />
-                    <input className="inp" type="time" value={draft.time} onChange={(ev) => setDraft({ ...draft, time: ev.target.value })} style={{ flex: '0 0 40%' }} />
-                  </div>
+                  <EntryFields
+                    value={draft}
+                    onChange={(patch) => setDraft({ ...draft, ...patch })}
+                    currencies={currencies}
+                    members={members}
+                    onRecalcRate={recalcRate}
+                    emptyRateHint="환율은 저장 당시 값으로 고정돼요. 고치려면 위 칸에 직접 적거나 버튼을 누르세요."
+                  />
                   <div className="editrow">
                     <button className="btn warn sm" style={{ flex: '0 0 26%' }} onClick={deleteEntry}>삭제</button>
                     <button className="btn quiet sm" style={{ flex: '0 0 26%' }} onClick={cancelEdit}>취소</button>

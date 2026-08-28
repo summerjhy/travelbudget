@@ -59,3 +59,21 @@ export function getStoredPayer(tripCode: string): string | null {
 export function setStoredPayer(tripCode: string, memberId: string) {
   localStorage.setItem(`${PAYER_KEY}.${tripCode}`, memberId)
 }
+
+const COST_MODE_KEY = 'travelbudget.costMode'
+
+export type CostMode = 'fund' | 'personal'
+
+/**
+ * 기록 탭에서 고른 기본 비용 구분. 이름을 못 알아본 줄(사진 인식 포함)이
+ * 공금으로 갈지 결제자 개인 지출로 갈지의 기본값이다. 항목별로는
+ * 그때그때 미리보기 카드에서 따로 고칠 수 있다.
+ */
+export function getStoredCostMode(tripCode: string): CostMode | null {
+  const v = localStorage.getItem(`${COST_MODE_KEY}.${tripCode}`)
+  return v === 'fund' || v === 'personal' ? v : null
+}
+
+export function setStoredCostMode(tripCode: string, mode: CostMode) {
+  localStorage.setItem(`${COST_MODE_KEY}.${tripCode}`, mode)
+}

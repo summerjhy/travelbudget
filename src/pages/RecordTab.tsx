@@ -6,20 +6,23 @@ import { useEntries, type NewEntryInput, type PendingEntry } from '../lib/useEnt
 import { useBudgets } from '../lib/useBudgets'
 import { useOfflineSync } from '../lib/useOfflineSync'
 import { usePolling } from '../lib/usePolling'
-import { parseText, parserConfig, type ParsedEntry } from '../lib/parser'
-import { CATEGORY_NAMES, categoryChip, guessCategory } from '../lib/categories'
+import { parseText, parserConfig } from '../lib/parser'
+import { guessCategory } from '../lib/categories'
 import { latestRateFor, rateFor, resolveAmount, type RateTable } from '../lib/rates'
 import { computeTotals, entryCurrency } from '../lib/totals'
 import { foreign, won } from '../lib/format'
-import { currencyChip, currencyLabel, currencyName, currencySuffix } from '../lib/currencies'
+import { currencyChip, currencyLabel, currencyName } from '../lib/currencies'
 import { BASE_CURRENCY, defaultCurrency, summaryCurrency, tripCurrencies } from '../lib/tripCurrency'
 import {
+  getStoredCostMode,
   getStoredCurrency,
   getStoredPayer,
   getStoredPayment,
+  setStoredCostMode,
   setStoredCurrency,
   setStoredPayer,
   setStoredPayment,
+  type CostMode,
 } from '../lib/session'
 import { DEFAULT_PAYMENT_METHOD, PAYMENT_METHODS, isPaymentMethod, paymentChip } from '../lib/payment'
 import { resizeAndCompressMany } from '../lib/imageResize'
@@ -28,15 +31,13 @@ import { consumeSharedFiles, takeShareFlag } from '../lib/shareTarget'
 import { Pair } from '../components/Pair'
 import { MemberName } from '../components/MemberName'
 import { ResultModal } from '../components/ResultModal'
+import { EntryFields, type EntryFieldsValue } from '../components/EntryFields'
 import type { Entry } from '../lib/types'
 import { nowForTrip, todayForTrip, yearForTrip } from '../lib/tripDate'
 
-interface PreviewItem extends ParsedEntry {
-  memberId: string | null
-  paymentMethod: string
+interface PreviewItem extends EntryFieldsValue {
+  title: string
   entrySource: Entry['source']
-  /** HH:MM. 사진에서 시각까지 읽었으면 채워진다. 없으면 저장 시각으로 채운다. */
-  time: string | null
 }
 
 const MAX_PHOTOS = 5
@@ -60,6 +61,7 @@ export function RecordTab() {
   const [currency, setCurrencyState] = useState<string | null>(null)
   const [payment, setPaymentState] = useState<string | null>(null)
   const [payer, setPayerState] = useState<string | null>(null)
+  const [costMode, setCostModeState] = useState<CostMode | null>(null)
   // 입력 방식. 사진/텍스트를 한 행 토글로 고른다.
   const [mode, setMode] = useState<'photo' | 'text'>('text')
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -80,6 +82,9 @@ export function RecordTab() {
   const activePayment = isPaymentMethod(payment) ? payment : DEFAULT_PAYMENT_METHOD
   const activePayer =
     payer && members.some((m) => m.id === payer) ? payer : member?.id ?? null
+  const activeCostMode = costMode ?? 'fund'
+  // 이름을 못 알아본 줄의 기본 비용 구분. 공금이면 null, 개인이면 지금 결제자.
+  const defaultMemberId = activeCostMode === 'personal' ? activePayer : null
 
   function pickCurrency(next: string) {
     setCurrencyState(next)
@@ -96,6 +101,11 @@ export function RecordTab() {
     if (trip) setStoredPayer(trip.code, next)
   }
 
+  function pickCostMode(next: CostMode) {
+    setCostModeState(next)
+    if (trip) setStoredCostMode(trip.code, next)
+  }
+
   // entries에서 최신 상태(pending 여부 포함)를 그때그때 조회한다 — id는 온라인 동기화 후에도 유지된다(로컬id는 즉시 반영, 서버id는 그대로).
   const lastSaved: PendingEntry[] = lastSavedIds
     ? lastSavedIds.map((id) => entries.find((e) => e.id === id)).filter((e): e is PendingEntry => !!e)
@@ -108,6 +118,7 @@ export function RecordTab() {
     setCurrencyState(getStoredCurrency(tripCode))
     setPaymentState(getStoredPayment(tripCode))
     setPayerState(getStoredPayer(tripCode))
+    setCostModeState(getStoredCostMode(tripCode))
   }, [tripCode])
 
   // 안드로이드 공유 시트로 이 앱을 열면(share_target) /record?share-target=... 로 온다.
@@ -133,6 +144,14 @@ export function RecordTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trip?.id])
 
+  /** 파싱 직후 값(외화 금액 하나)을 두 칸(외화·원화) 편집 모델로 바꾼다. 최근 캐시 환율로 원화 칸을 미리 채워 둔다. */
+  function toMoneyFields(amount: number, curr: string) {
+    if (curr === BASE_CURRENCY) return { cny: '', krw: amount ? String(Math.round(amount)) : '' }
+    const rate = latestRateFor(rates, curr)
+    const krw = amount && rate ? String(Math.round(amount * rate)) : ''
+    return { cny: amount ? String(amount) : '', krw }
+  }
+
   function handleParse() {
     setError(null)
     const year = trip?.start_date.slice(0, 4) ?? yearForTrip(trip)
@@ -144,14 +163,22 @@ export function RecordTab() {
     }
     setPreview((prev) => [
       ...prev,
-      ...parsed.map((p) => ({
-        ...p,
-        memberId: members.find((m) => m.personName === p.personName)?.id ?? null,
-        paymentMethod: activePayment,
-        date: p.date ?? todayForTrip(trip),
-        entrySource: 'text' as const,
-        time: null,
-      })),
+      ...parsed.map((p) => {
+        const matchedMember = members.find((m) => m.personName === p.personName)?.id ?? null
+        return {
+          title: p.title,
+          category: p.category,
+          date: p.date ?? todayForTrip(trip),
+          time: '',
+          currency: p.currency,
+          ...toMoneyFields(p.amount, p.currency),
+          rate: '',
+          paymentMethod: activePayment,
+          paidBy: activePayer,
+          memberId: matchedMember ?? defaultMemberId,
+          entrySource: 'text' as const,
+        }
+      }),
     ])
   }
 
@@ -206,17 +233,19 @@ export function RecordTab() {
             : read && currencies.includes(read)
               ? read
               : activeCurrency
+          const amount = isKRW ? (r.krw ?? 0) : (r.amount ?? 0)
           newItems.push({
             title: r.merchant || '지출',
             category: guessCategory(r.merchant || ''),
-            personName: null,
-            memberId: null,
-            paymentMethod: activePayment,
             date: r.date ?? defaultDate,
-            amount: isKRW ? (r.krw ?? 0) : (r.amount ?? 0),
+            time: r.time ?? '',
             currency: itemCurrency,
+            ...toMoneyFields(amount, itemCurrency),
+            rate: '',
+            paymentMethod: activePayment,
+            paidBy: activePayer,
+            memberId: defaultMemberId,
             entrySource: 'image',
-            time: r.time,
           })
         }
         if (addedFromThisImage === 0) failCount++
@@ -256,6 +285,33 @@ export function RecordTab() {
     setPreview((prev) => prev.filter((_, i) => i !== index))
   }
 
+  /**
+   * 이 항목만 그 날짜 환율로 다시 계산한다. 내역 탭 수정 카드의
+   * recalcRate 와 같은 동작 — 아직 저장 전이라 "덮어쓸 값"이 없다는 점만 다르다.
+   */
+  async function recalcRateForItem(index: number) {
+    const p = preview[index]
+    if (!p || p.currency === BASE_CURRENCY) return
+
+    let rate = rateFor(rates, p.date, p.currency)
+    if (rate === null) {
+      const fetched = await fetchNow(p.date)
+      if (fetched.ok && fetched.rates) rate = fetched.rates[p.currency] ?? null
+    }
+    if (rate === null) {
+      setError(`${p.date} 의 ${p.currency} 환율이 없어요. 설정 탭에서 조회하거나 직접 입력해주세요.`)
+      return
+    }
+
+    const cny = parseFloat(p.cny) || 0
+    if (!cny) {
+      setError('외화 금액이 있어야 다시 계산할 수 있어요.')
+      return
+    }
+    updatePreviewItem(index, { krw: String(Math.round(cny * rate)), rate: String(rate) })
+    setError(null)
+  }
+
   async function handleSave() {
     if (!trip) return
     setSaving(true)
@@ -263,12 +319,12 @@ export function RecordTab() {
 
     // 저장에 필요한 (날짜, 통화) 중 캐시에 없는 게 있으면 그 날짜를 한 번 조회한다.
     // fetch-rate 는 여행의 외화를 한꺼번에 돌려주므로 날짜당 한 번이면 충분하다.
-    const saved = preview.filter((p) => p.amount > 0)
-    const neededDates = Array.from(new Set(saved.map((p) => p.date ?? todayForTrip(trip))))
+    const saved = preview.filter((p) => (parseFloat(p.cny) || 0) > 0 || (parseFloat(p.krw) || 0) > 0)
+    const neededDates = Array.from(new Set(saved.map((p) => p.date || todayForTrip(trip))))
     const table: RateTable = { ...rates }
     for (const date of neededDates) {
       const missing = saved
-        .filter((p) => (p.date ?? todayForTrip(trip)) === date)
+        .filter((p) => (p.date || todayForTrip(trip)) === date)
         .some((p) => rateFor(table, date, p.currency) === null)
       if (!missing) continue
 
@@ -280,7 +336,7 @@ export function RecordTab() {
       // 오프라인 등으로 조회가 안 된 통화는 그 통화의 가장 최근 캐시 환율로 버틴다.
       // 온라인 복귀 후 정확한 환율이 필요하면 내역 탭에서 고칠 수 있다.
       for (const p of saved) {
-        if ((p.date ?? todayForTrip(trip)) !== date) continue
+        if ((p.date || todayForTrip(trip)) !== date) continue
         if (rateFor(table, date, p.currency) !== null) continue
         const fallback = latestRateFor(rates, p.currency)
         if (fallback) table[date] = { ...(table[date] ?? {}), [p.currency]: fallback }
@@ -292,30 +348,30 @@ export function RecordTab() {
     const fallbackTime = nowForTrip(trip)
     const items: NewEntryInput[] = []
     for (const p of saved) {
-      const date = p.date ?? todayForTrip(trip)
-      const isKRW = p.currency === BASE_CURRENCY
-      const resolved = resolveAmount(
-        { krw: isKRW ? p.amount : undefined, cny: isKRW ? undefined : p.amount },
-        date,
-        p.currency,
-        table,
-      )
+      const date = p.date || todayForTrip(trip)
+      const cny = parseFloat(p.cny) || 0
+      const krw = parseFloat(p.krw) || 0
+      const resolved = resolveAmount({ krw, cny }, date, p.currency, table)
       if (!resolved.krw && !resolved.cny) continue
+
+      // 환율 칸을 직접 채웠으면 그 값이 우선이다 (설정 탭 직접입력과 같은 원칙).
+      const typedRate = parseFloat(p.rate)
+      const useTyped = p.currency !== BASE_CURRENCY && typedRate > 0 && resolved.cny > 0
+
       items.push({
         date,
         title: p.title,
         category: p.category,
         member_id: p.memberId,
         payment_method: p.paymentMethod,
-        // 이름을 적어 개인 지출로 잡힌 건은 그 사람이 자기 돈으로 낸 것이다.
-        paid_by: p.memberId ?? activePayer,
-        krw: resolved.krw,
+        paid_by: p.paidBy,
+        krw: useTyped ? Math.round(resolved.cny * typedRate) : resolved.krw,
         cny: resolved.cny,
         currency: p.currency,
-        rate: resolved.rate,
+        rate: useTyped ? typedRate : resolved.rate,
         source: p.entrySource,
         created_by: personName,
-        time: p.time ?? fallbackTime,
+        time: p.time || fallbackTime,
       })
     }
 
@@ -394,9 +450,9 @@ export function RecordTab() {
 
       <div className="prev" style={{ marginTop: 9 }}>
       {showCurrencyPicker && (
-        <div style={{ marginBottom: 11 }}>
-          <label className="lab">💱 입력 단위</label>
+        <div style={{ marginBottom: 6 }}>
           <div className="chips">
+            <span className="note" style={{ marginRight: 4 }}>💱 입력 단위</span>
             {currencies.map((c) => (
               <button
                 key={c}
@@ -408,28 +464,30 @@ export function RecordTab() {
               </button>
             ))}
           </div>
+          <p className="note" style={{ margin: '4px 0 0' }}>
+            단위를 안 적은 숫자는 <b>{currencyName(activeCurrency)}</b>({activeCurrency})로 읽어요.
+            {' '}<b>원</b>{currencies.length > 2 ? ' 처럼 단위를 적으면' : '을 붙이면'} 그 단위로 들어가요.
+          </p>
         </div>
       )}
 
-      <div style={{ marginBottom: members.length > 0 ? 11 : 0 }}>
-        <label className="lab">💳 결제 수단</label>
-        <div className="chips">
-          {PAYMENT_METHODS.map((m) => (
-            <button
-              key={m.code}
-              className={'chip' + (activePayment === m.code ? ' on' : '')}
-              onClick={() => pickPayment(m.code)}
-            >
-              {paymentChip(m.code)}
-            </button>
-          ))}
-        </div>
+      <div className="chips" style={{ marginBottom: 6 }}>
+        <span className="note" style={{ marginRight: 4 }}>💳 결제 수단</span>
+        {PAYMENT_METHODS.map((m) => (
+          <button
+            key={m.code}
+            className={'chip' + (activePayment === m.code ? ' on' : '')}
+            onClick={() => pickPayment(m.code)}
+          >
+            {paymentChip(m.code)}
+          </button>
+        ))}
       </div>
 
       {members.length > 0 && (
-        <div>
-          <label className="lab">🙋 결제자</label>
-          <div className="chips">
+        <>
+          <div className="chips" style={{ marginBottom: 6 }}>
+            <span className="note" style={{ marginRight: 4 }}>🙋 결제자</span>
             {members.map((m) => (
               <button
                 key={m.id}
@@ -440,7 +498,22 @@ export function RecordTab() {
               </button>
             ))}
           </div>
-        </div>
+
+          <div>
+            <div className="chips">
+              <span className="note" style={{ marginRight: 4 }}>🏷️ 비용 구분</span>
+              <button className={'chip fund' + (activeCostMode === 'fund' ? ' on' : '')} onClick={() => pickCostMode('fund')}>
+                공금
+              </button>
+              <button className={'chip' + (activeCostMode === 'personal' ? ' on' : '')} onClick={() => pickCostMode('personal')}>
+                개인비용
+              </button>
+            </div>
+            <p className="note" style={{ margin: '4px 0 0' }}>
+              사용내역에 이름을 안 적으면 공금, {memberNames.join(' · ') || '참여자'} 중 하나를 적으면 그 사람 개인 결제로 들어가요.
+            </p>
+          </div>
+        </>
       )}
 
       </div>
@@ -452,102 +525,34 @@ export function RecordTab() {
         style={{ marginTop: 9 }}
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder={'쓴 만큼 한 줄씩 적으세요.\n\n훠궈 380\n택시 45 소영\n마사지 198 혜연\n숙소 240000원'}
+        placeholder={'쓴 만큼 한 줄씩 적으세요.\n훠궈 380\n택시 45 쪼리미\n마사지 198 혜연\n숙소 24만원'}
       />
       <div className="row2" style={{ marginTop: 10 }}>
         <button className="btn quiet" style={{ flex: '0 0 32%' }} onClick={handleClear}>지우기</button>
-        <button className="btn" onClick={handleParse}>읽어들이기</button>
+        <button className="btn" onClick={handleParse}>입력하기</button>
       </div>
-      <p className="note" style={{ marginTop: 9 }}>
-        이름을 안 적으면 <b>공금</b>, {memberNames.join(' · ') || '참여자'} 중 하나를 적으면 그 사람 개인 결제로 들어가요.
-        단위를 안 적은 숫자는 <b>{currencyName(activeCurrency)}</b>({activeCurrency})로 읽어요.
-        {' '}<b>원</b>{currencies.length > 2 ? ' 처럼 단위를 적으면' : '을 붙이면'} 그 단위로 들어가요.
-      </p>
       </>
       )}
 
       {preview.length > 0 && (
         <div>
           <div className="sec">✅ 확인하고 저장</div>
-          {preview.map((p, i) => {
-            const itemRate = latestRateFor(rates, p.currency)
-            const other =
-              p.currency === BASE_CURRENCY
-                ? null
-                : won(p.amount * itemRate)
-            return (
-              <div className="prev" key={i}>
-                <div className="l1">
-                  <input value={p.title} onChange={(e) => updatePreviewItem(i, { title: e.target.value })} />
-                  <input
-                    className="n"
-                    inputMode="decimal"
-                    value={p.amount}
-                    onChange={(e) => updatePreviewItem(i, { amount: parseFloat(e.target.value) || 0 })}
-                  />
-                </div>
-                {(p.date || p.time) && (
-                  <p className="note" style={{ margin: '-5px 0 7px' }}>
-                    📅 {(p.date ?? todayForTrip(trip)).slice(5).replace('-', '/')}
-                    {p.time ? ` ${p.time}` : ''}
-                  </p>
-                )}
-                <div className="chips">
-                  {currencies.map((c) => (
-                    <button
-                      key={c}
-                      className={'chip' + (p.currency === c ? ' on' : '')}
-                      onClick={() => updatePreviewItem(i, { currency: c })}
-                      title={currencyLabel(c)}
-                    >
-                      {currencySuffix(c)}
-                    </button>
-                  ))}
-                  {other && <span className="note" style={{ marginLeft: 2 }}>≈ {other}</span>}
-                  <button className="chip" style={{ marginLeft: 'auto' }} onClick={() => removePreviewItem(i)}>빼기</button>
-                </div>
-                <div className="chips" style={{ marginTop: 7 }}>
-                  {CATEGORY_NAMES.map((c) => (
-                    <button
-                      key={c}
-                      className={'chip' + (p.category === c ? ' on' : '')}
-                      onClick={() => updatePreviewItem(i, { category: c })}
-                    >
-                      {categoryChip(c)}
-                    </button>
-                  ))}
-                </div>
-                <div className="chips" style={{ marginTop: 7 }}>
-                  {PAYMENT_METHODS.map((m) => (
-                    <button
-                      key={m.code}
-                      className={'chip' + (p.paymentMethod === m.code ? ' on' : '')}
-                      onClick={() => updatePreviewItem(i, { paymentMethod: m.code })}
-                    >
-                      {paymentChip(m.code)}
-                    </button>
-                  ))}
-                </div>
-                <div className="chips" style={{ marginTop: 7 }}>
-                  <button
-                    className={'chip fund' + (p.memberId === null ? ' on' : '')}
-                    onClick={() => updatePreviewItem(i, { memberId: null, personName: null })}
-                  >
-                    공금
-                  </button>
-                  {members.map((m) => (
-                    <button
-                      key={m.id}
-                      className={'chip' + (p.memberId === m.id ? ' on' : '')}
-                      onClick={() => updatePreviewItem(i, { memberId: m.id, personName: m.personName })}
-                    >
-                      <MemberName emoji={m.emoji} name={m.personName} />
-                    </button>
-                  ))}
-                </div>
+          {preview.map((p, i) => (
+            <div className="prev" key={i}>
+              <div className="l1">
+                <input value={p.title} onChange={(e) => updatePreviewItem(i, { title: e.target.value })} />
+                <button className="chip" onClick={() => removePreviewItem(i)}>빼기</button>
               </div>
-            )
-          })}
+              <EntryFields
+                value={p}
+                onChange={(patch) => updatePreviewItem(i, patch)}
+                currencies={currencies}
+                members={members}
+                onRecalcRate={() => recalcRateForItem(i)}
+                emptyRateHint="환율은 저장할 때 계산돼요. 고치려면 위 칸에 직접 적거나 버튼을 누르세요."
+              />
+            </div>
+          ))}
           <button className="btn" onClick={handleSave} disabled={saving}>
             {saving ? '저장 중...' : '저장하기'}
           </button>
@@ -597,7 +602,7 @@ export function RecordTab() {
 
       <div className="sec">💰 잔여 예산</div>
       <div className="box">
-        <div className="tr"><span className="k">예산 총액</span><span className="v">{won(totals.budget)}</span></div>
+        <div className="tr"><span className="k">예산 총액</span><span className="v"><Pair amount={totals.budgetCny} krw={totals.budget} currency={summary} /></span></div>
         <div className="tr"><span className="k">공금 사용</span><span className="v"><Pair amount={totals.fund.cny} krw={totals.fund.krw} currency={summary} /></span></div>
         <div className="tr">
           <span className="k">잔여</span>
