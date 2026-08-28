@@ -449,73 +449,71 @@ export function RecordTab() {
       )}
 
       <div className="prev" style={{ marginTop: 9 }}>
-      {showCurrencyPicker && (
-        <div style={{ marginBottom: 6 }}>
-          <div className="chips">
-            <span className="note" style={{ marginRight: 4 }}>💱 입력 단위</span>
-            {currencies.map((c) => (
-              <button
-                key={c}
-                className={'chip' + (activeCurrency === c ? ' on' : '')}
-                onClick={() => pickCurrency(c)}
-                title={currencyLabel(c)}
-              >
-                {currencyChip(c)}
-              </button>
-            ))}
-          </div>
-          <p className="note" style={{ margin: '4px 0 0' }}>
-            단위를 안 적은 숫자는 <b>{currencyName(activeCurrency)}</b>({activeCurrency})로 읽어요.
-            {' '}<b>원</b>{currencies.length > 2 ? ' 처럼 단위를 적으면' : '을 붙이면'} 그 단위로 들어가요.
-          </p>
-        </div>
-      )}
-
-      <div className="chips" style={{ marginBottom: 6 }}>
-        <span className="note" style={{ marginRight: 4 }}>💳 결제 수단</span>
-        {PAYMENT_METHODS.map((m) => (
-          <button
-            key={m.code}
-            className={'chip' + (activePayment === m.code ? ' on' : '')}
-            onClick={() => pickPayment(m.code)}
-          >
-            {paymentChip(m.code)}
-          </button>
-        ))}
-      </div>
-
-      {members.length > 0 && (
-        <>
-          <div className="chips" style={{ marginBottom: 6 }}>
-            <span className="note" style={{ marginRight: 4 }}>🙋 결제자</span>
-            {members.map((m) => (
-              <button
-                key={m.id}
-                className={'chip' + (activePayer === m.id ? ' on' : '')}
-                onClick={() => pickPayer(m.id)}
-              >
-                <MemberName emoji={m.emoji} name={m.personName} />
-              </button>
-            ))}
-          </div>
-
-          <div>
-            <div className="chips">
-              <span className="note" style={{ marginRight: 4 }}>🏷️ 비용 구분</span>
-              <button className={'chip fund' + (activeCostMode === 'fund' ? ' on' : '')} onClick={() => pickCostMode('fund')}>
-                공금
-              </button>
-              <button className={'chip' + (activeCostMode === 'personal' ? ' on' : '')} onClick={() => pickCostMode('personal')}>
-                개인비용
-              </button>
+        <div className="deftable">
+          {showCurrencyPicker && (
+            <div className="defcell">
+              <span className="deflab">💱 입력 단위</span>
+              <div className="chips">
+                {currencies.map((c) => (
+                  <button
+                    key={c}
+                    className={'chip' + (activeCurrency === c ? ' on' : '')}
+                    onClick={() => pickCurrency(c)}
+                    title={currencyLabel(c)}
+                  >
+                    {currencyChip(c)}
+                  </button>
+                ))}
+              </div>
             </div>
-            <p className="note" style={{ margin: '4px 0 0' }}>
-              사용내역에 이름을 안 적으면 공금, {memberNames.join(' · ') || '참여자'} 중 하나를 적으면 그 사람 개인 결제로 들어가요.
-            </p>
-          </div>
-        </>
-      )}
+          )}
 
+          {members.length > 0 && (
+            <div className="defcell">
+              <span className="deflab">🏷️ 비용 구분</span>
+              <div className="chips">
+                <button className={'chip fund' + (activeCostMode === 'fund' ? ' on' : '')} onClick={() => pickCostMode('fund')}>
+                  공금
+                </button>
+                <button className={'chip' + (activeCostMode === 'personal' ? ' on' : '')} onClick={() => pickCostMode('personal')}>
+                  개인비용
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="defcell">
+            <span className="deflab">💳 결제 수단</span>
+            <div className="chips">
+              {PAYMENT_METHODS.map((m) => (
+                <button
+                  key={m.code}
+                  className={'chip' + (activePayment === m.code ? ' on' : '')}
+                  onClick={() => pickPayment(m.code)}
+                >
+                  {paymentChip(m.code)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {members.length > 0 && (
+            <div className="defcell">
+              <span className="deflab">🙋 결제자</span>
+              <div className="chips">
+                {members.map((m) => (
+                  <button
+                    key={m.id}
+                    className={'chip' + (activePayer === m.id ? ' on' : '')}
+                    onClick={() => pickPayer(m.id)}
+                  >
+                    <MemberName emoji={m.emoji} name={m.personName} />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {mode === 'text' && (
@@ -525,13 +523,35 @@ export function RecordTab() {
         style={{ marginTop: 9 }}
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder={'쓴 만큼 한 줄씩 적으세요.\n훠궈 380\n택시 45 쪼리미\n마사지 198 혜연\n숙소 24만원'}
+        placeholder={'쓴 만큼 한 줄씩 적으세요.\n훠궈 380\n간식 45 쪼리미\n호텔 120만원'}
       />
       <div className="row2" style={{ marginTop: 10 }}>
         <button className="btn quiet" style={{ flex: '0 0 32%' }} onClick={handleClear}>지우기</button>
         <button className="btn" onClick={handleParse}>입력하기</button>
       </div>
       </>
+      )}
+
+      {(showCurrencyPicker || members.length > 0) && (
+        <div style={{ marginTop: 9 }}>
+          {showCurrencyPicker && (
+            <p className="tip">
+              <span className="tip-mark" aria-hidden="true">?</span>
+              <span>
+                입력 단위: 단위를 안 적은 숫자는 <b>{currencyName(activeCurrency)}</b>({activeCurrency})로 읽어요.
+                {' '}<b>원</b>{currencies.length > 2 ? ' 처럼 단위를 적으면' : '을 붙이면'} 그 단위로 들어가요.
+              </span>
+            </p>
+          )}
+          {members.length > 0 && (
+            <p className="tip">
+              <span className="tip-mark" aria-hidden="true">?</span>
+              <span>
+                비용 구분: 사용내역에 이름을 안 적으면 공금, {memberNames.join(' · ') || '참여자'} 중 하나를 적으면 그 사람 개인 결제로 들어가요.
+              </span>
+            </p>
+          )}
+        </div>
       )}
 
       {preview.length > 0 && (
@@ -541,7 +561,7 @@ export function RecordTab() {
             <div className="prev" key={i}>
               <div className="l1">
                 <input value={p.title} onChange={(e) => updatePreviewItem(i, { title: e.target.value })} />
-                <button className="chip" onClick={() => removePreviewItem(i)}>빼기</button>
+                <button className="chip" onClick={() => removePreviewItem(i)}>이 항목 삭제</button>
               </div>
               <EntryFields
                 value={p}

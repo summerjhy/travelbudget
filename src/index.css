@@ -529,12 +529,12 @@ input, select, textarea {
 .prev .l1 input {
   flex: 1;
   border: none;
-  background: none;
+  background: var(--paper);
   font-size: 15px;
   font-weight: 500;
-  padding: 0;
+  padding: 8px 10px;
   min-width: 0;
-  border-bottom: 1px solid var(--line);
+  border-radius: 8px;
 }
 .prev .l1 .n {
   width: 96px;
@@ -1128,18 +1128,8 @@ input, select, textarea {
   place-items: center;
   font-size: 1.06em;
   line-height: 1;
-  border-radius: 6px;
-  background: var(--accent-soft);
   /* 이모지 자체는 폰트 기준선이 제각각이라 살짝 내려 앉히면 가운데가 맞는다 */
   padding-top: 1px;
-}
-/* 칩 안에서는 칩 배경 위에 얹히므로 톤을 낮춘다.
-   선택된 칩은 강조색 위라 반투명 흰색이 자연스럽다. */
-.chip .mname-emoji {
-  background: color-mix(in srgb, var(--jade) 13%, transparent);
-}
-.chip.on .mname-emoji {
-  background: rgba(255, 255, 255, .22);
 }
 
 /* ------------------------------ 모달 ------------------------------ */
@@ -1176,4 +1166,55 @@ input, select, textarea {
   color: var(--soft);
   white-space: pre-line;
   margin: 0 0 16px;
+}
+
+/* ------------------------------ 기록 탭 상단 기본값 ------------------------------ */
+/* 입력단위·비용구분·결제수단·결제자를 2x2 표처럼 배치한다. 칸이 좁아지므로
+   칩을 살짝 줄인다 — 기본 칩 크기는 넓은 가로줄을 전제로 만들어졌다. */
+.deftable {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 10px;
+}
+.deflab {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.defcell .chips {
+  gap: 5px;
+}
+.defcell .chip {
+  padding: 5px 9px;
+  font-size: 12.5px;
+}
+
+/* ------------------------------ 입력 도움말 ------------------------------ */
+/* 작고 빨갛게, 앞에 물음표 배지를 붙여 눈에 띄게 한다 — 본문 note 톤으로
+   두면 다들 그냥 지나쳐서 이름 안 적으면 공금으로 빠지는 걸 모르고 지나간다. */
+.tip {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--rose);
+  margin: 0 0 6px;
+}
+.tip-mark {
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+  margin-top: 1px;
+  border-radius: 50%;
+  border: 1px solid var(--rose);
+  color: var(--rose);
+  font-size: 9.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }

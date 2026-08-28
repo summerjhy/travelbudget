@@ -1,5 +1,6 @@
 import { CATEGORY_NAMES, categoryChip } from '../lib/categories'
 import { currencyChip, currencyLabel, currencyNeedsSpace, currencySuffix } from '../lib/currencies'
+import { formatAmountInput, stripAmountInput } from '../lib/format'
 import { BASE_CURRENCY } from '../lib/tripCurrency'
 import { PAYMENT_METHODS, paymentChip } from '../lib/payment'
 import { MemberName } from './MemberName'
@@ -74,8 +75,8 @@ export function EntryFields({
           <label>
             <input
               inputMode="decimal"
-              value={value.cny}
-              onChange={(ev) => onChange({ cny: ev.target.value })}
+              value={formatAmountInput(value.cny)}
+              onChange={(ev) => onChange({ cny: stripAmountInput(ev.target.value) })}
               // 통화 기호가 없어 코드(USD, TWD 등 3글자)를 그대로 보여줄 때는
               // 기본 30px 여백으로 부족해 숫자와 글자가 겹친다.
               style={currencyNeedsSpace(value.currency) ? { paddingRight: 52 } : undefined}
@@ -84,7 +85,11 @@ export function EntryFields({
           </label>
         )}
         <label>
-          <input inputMode="numeric" value={value.krw} onChange={(ev) => onChange({ krw: ev.target.value })} />
+          <input
+            inputMode="numeric"
+            value={formatAmountInput(value.krw)}
+            onChange={(ev) => onChange({ krw: stripAmountInput(ev.target.value) })}
+          />
           <span>원</span>
         </label>
       </div>
@@ -95,9 +100,9 @@ export function EntryFields({
             <label>
               <input
                 inputMode="decimal"
-                value={value.rate}
+                value={formatAmountInput(value.rate)}
                 placeholder="환율"
-                onChange={(ev) => onChange({ rate: ev.target.value })}
+                onChange={(ev) => onChange({ rate: stripAmountInput(ev.target.value) })}
                 // "원/CNY" 처럼 접미사가 길어서 기본 30px 여백으로는 숫자와 겹친다.
                 style={{ paddingRight: 64 }}
               />
@@ -116,6 +121,7 @@ export function EntryFields({
       )}
 
       <div className="chips" style={{ marginBottom: 8 }}>
+        <span className="note" style={{ marginRight: 4, flexBasis: '100%' }}>🗂️ 카테고리</span>
         {CATEGORY_NAMES.map((c) => (
           <button
             key={c}
