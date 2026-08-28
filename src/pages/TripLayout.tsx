@@ -26,7 +26,17 @@ export function TripLayout() {
       <header className="head">
         <div className="headrow">
           <h1 className="title">{trip?.name}</h1>
-          <div className="eyebrow">{trip?.code}</div>
+          <div className="eyebrow">
+            {trip?.end_date && trip.end_date !== trip.start_date ? (
+              <>
+                <span>{trip.start_date}</span>
+                <span>~</span>
+                <span>{trip.end_date}</span>
+              </>
+            ) : (
+              <span>{trip?.start_date}</span>
+            )}
+          </div>
         </div>
         <div className="remain">
           <b>💰 {won(totals.remain)}</b>

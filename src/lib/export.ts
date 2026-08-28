@@ -20,13 +20,13 @@ function memberName(members: MemberWithName[], id: string | null): string {
 }
 
 /** CSV 한 칸. 쉼표·따옴표·줄바꿈이 들어가면 따옴표로 감싸고 내부 따옴표는 두 번 쓴다. */
-function cell(v: string | number | null | undefined): string {
+export function cell(v: string | number | null | undefined): string {
   const s = v === null || v === undefined ? '' : String(v)
   return /[",\n\r]/.test(s) ? '"' + s.split('"').join('""') + '"' : s
 }
 
 /** 엑셀이 UTF-8 로 인식하게 하는 BOM. 없으면 한글이 전부 깨진다. */
-const BOM = '\uFEFF'
+export const BOM = '\uFEFF'
 
 const CSV_HEADER = [
   '날짜', '시간', '내역', '분류', '공금/개인', '결제자', '결제수단',

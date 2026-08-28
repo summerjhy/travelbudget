@@ -21,6 +21,7 @@ interface TripContextValue {
   switchTrip: () => void
   setPersonName: (name: string, emoji?: string) => Promise<{ ok: boolean; error?: string }>
   renameMe: (name: string) => Promise<{ ok: boolean; error?: string }>
+  setTreasurer: (memberId: string | null) => Promise<{ ok: boolean; error?: string }>
 }
 
 const TripContext = createContext<TripContextValue | null>(null)
@@ -229,8 +230,22 @@ export function TripProvider({ children }: { children: ReactNode }) {
     setStoredPersonName(v.name)
     return { ok: true }
   }
+  /** 모임통장 관리자(총무) 지정. 여행 정보 자체를 바꾸는 값이라 trip_members 가 아니라 trips 에 둔다. */
+  async function setTreasurer(memberId: string | null) {
+    if (!trip) return { ok: false, error: '여행 정보가 없어요.' }
+    const { data: updated, error: updateError } = await supabase
+      .from('trips')
+      .update({ treasurer_member_id: memberId })
+      .eq('id', trip.id)
+      .select()
+      .single()
+    if (updateError || !updated) return { ok: false, error: '모임통장 관리자 지정에 실패했어요.' }
+    setTrip(updated)
+    return { ok: true }
+  }
+
   const value = useMemo<TripContextValue>(
-    () => ({ loading, trip, error, personName, member, connectTrip, switchTrip, setPersonName, renameMe }),
+    () => ({ loading, trip, error, personName, member, connectTrip, switchTrip, setPersonName, renameMe, setTreasurer }),
     [loading, trip, error, personName, member],
   )
 

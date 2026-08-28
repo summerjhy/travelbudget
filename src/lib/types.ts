@@ -9,6 +9,8 @@ export interface Trip {
   tz: string
   base_currency: string
   spend_currencies: string[]
+  /** 모임통장(공금) 관리자. trip_members.id. 최종 정산 시 예산 잔여/초과분의 이체 방향 기준점. */
+  treasurer_member_id: string | null
   created_at: string
 }
 

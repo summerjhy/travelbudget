@@ -9,6 +9,7 @@ import { foreignCurrencies } from '../lib/tripCurrency'
 import { THEMES, applyTheme, getStoredTheme, setStoredTheme, type ThemeCode } from '../lib/themes'
 import { useEntries } from '../lib/useEntries'
 import { ExportPanel } from '../components/ExportPanel'
+import { SettlementPanel } from '../components/SettlementPanel'
 import { BudgetPanel } from '../components/BudgetPanel'
 import { ShareTripButton } from '../components/ShareTripButton'
 import { PushPanel } from '../components/PushPanel'
@@ -19,7 +20,7 @@ import { withEmoji } from '../lib/memberEmoji'
 import { todayForTrip } from '../lib/tripDate'
 
 export function SettingsTab() {
-  const { trip, member, switchTrip, renameMe } = useTrip()
+  const { trip, member, switchTrip, renameMe, setTreasurer } = useTrip()
   const { members, allMembers, refresh: refreshMembers, addMember, setMemberEmoji, deactivateMember } = useTripMembers(trip?.id)
   const { rates, setManualRate, fetchNow } = useRates(trip?.id, trip?.code)
   const { budgets, total, addBudget, updateBudget, removeBudget } = useBudgets(trip?.id)
@@ -139,6 +140,21 @@ export function SettingsTab() {
         <div className="tr"><span className="k">참여 코드</span><span className="v">{trip?.code}</span></div>
         <div className="tr"><span className="k">목적지</span><span className="v txt">{trip?.destinations?.length ? trip.destinations.join(' · ') : '미지정'}</span></div>
         <div className="tr"><span className="k">사용 통화</span><span className="v txt">{trip?.spend_currencies?.join(' · ') || '-'}</span></div>
+        <div className="tr">
+          <span className="k">모임통장 관리자</span>
+          <span className="v">
+            <select
+              className="inp sel"
+              value={trip?.treasurer_member_id ?? ''}
+              onChange={(e) => setTreasurer(e.target.value || null)}
+            >
+              <option value="">미지정</option>
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>{m.displayName}</option>
+              ))}
+            </select>
+          </span>
+        </div>
       </div>
 
       <div className="sec">🙋 참여자</div>
@@ -315,6 +331,13 @@ export function SettingsTab() {
       {trip && (
         <div className="box" style={{ padding: 14, marginBottom: 10 }}>
           <ExportPanel trip={trip} members={allMembers} entries={entries} />
+        </div>
+      )}
+
+      <div className="sec">🧮 최종 정산하기</div>
+      {trip && (
+        <div className="box" style={{ padding: 14, marginBottom: 10 }}>
+          <SettlementPanel trip={trip} members={members} entries={entries} budget={total} />
         </div>
       )}
 
