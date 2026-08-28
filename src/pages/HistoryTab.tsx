@@ -8,7 +8,7 @@ import { usePolling } from '../lib/usePolling'
 import { latestRateFor, rateFor, resolveAmount } from '../lib/rates'
 import { computeTotals, entryCurrency } from '../lib/totals'
 import { CATEGORIES, CATEGORY_NAMES, categoryChip } from '../lib/categories'
-import { currencyChip, currencyLabel, currencySuffix } from '../lib/currencies'
+import { currencyChip, currencyLabel, currencyNeedsSpace, currencySuffix } from '../lib/currencies'
 import { BASE_CURRENCY, summaryCurrency, tripCurrencies } from '../lib/tripCurrency'
 import { PAYMENT_METHODS, paymentChip } from '../lib/payment'
 import { won } from '../lib/format'
@@ -317,7 +317,14 @@ export function HistoryTab() {
                   <div className="money">
                     {draft.currency !== BASE_CURRENCY && (
                       <label>
-                        <input inputMode="decimal" value={draft.cny} onChange={(ev) => setDraft({ ...draft, cny: ev.target.value })} />
+                        <input
+                          inputMode="decimal"
+                          value={draft.cny}
+                          onChange={(ev) => setDraft({ ...draft, cny: ev.target.value })}
+                          // 통화 기호가 없어 코드(USD, TWD 등 3글자)를 그대로 보여줄 때는
+                          // 기본 30px 여백으로 부족해 숫자와 글자가 겹친다.
+                          style={currencyNeedsSpace(draft.currency) ? { paddingRight: 52 } : undefined}
+                        />
                         <span>{currencySuffix(draft.currency)}</span>
                       </label>
                     )}
@@ -335,6 +342,8 @@ export function HistoryTab() {
                             value={draft.rate}
                             placeholder="환율"
                             onChange={(ev) => setDraft({ ...draft, rate: ev.target.value })}
+                            // "원/CNY" 처럼 접미사가 길어서 기본 30px 여백으로는 숫자와 겹친다.
+                            style={{ paddingRight: 64 }}
                           />
                           <span>원/{draft.currency}</span>
                         </label>
