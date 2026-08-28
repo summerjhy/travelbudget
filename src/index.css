@@ -561,7 +561,7 @@ input, select, textarea {
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
-.money span {
+.money label span {
   position: absolute;
   right: 10px;
   top: 50%;
@@ -569,10 +569,24 @@ input, select, textarea {
   font-size: 13.5px;
   color: var(--soft);
 }
+/* 위안·원 두 칸이 같은 금액이라는 걸 보여주는 = 표시. 통화가 KRW면
+   외화 칸 자체가 없으니 같이 안 그린다(JSX에서 isForeign 일 때만 렌더). */
+.money .eq {
+  flex: 0 0 auto;
+  align-self: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--soft);
+}
 .editrow {
   display: flex;
   gap: 8px;
   margin-top: 9px;
+}
+/* 날짜·시각도 위 표(deftable)의 드롭다운과 같은 눈금으로 줄인다. */
+.editrow.compact input.inp {
+  padding: 7px 8px;
+  font-size: 13px;
 }
 
 /* ------------------------------ 기타 텍스트 ------------------------------ */
@@ -1186,7 +1200,7 @@ input, select, textarea {
   color: var(--ink);
 }
 .defcell .deflab {
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 .defcell .chips {
   gap: 5px;
@@ -1194,6 +1208,14 @@ input, select, textarea {
 .defcell .chip {
   padding: 5px 9px;
   font-size: 12.5px;
+}
+/* EntryFields(미리보기·내역 수정 카드)의 카테고리/비용구분/결제수단/
+   결제자도 같은 표 레이아웃을 쓰되, 칩 대신 드롭다운 하나만 들어간다.
+   기본 .sel 은 넓은 한 줄 폼을 전제로 커서 라벨 크기에 맞춰 줄인다. */
+.defcell select.inp.sel {
+  padding: 7px 26px 7px 8px;
+  font-size: 13px;
+  border-radius: 8px;
 }
 
 /* ------------------------------ 입력 도움말 ------------------------------ */
