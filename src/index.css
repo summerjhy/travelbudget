@@ -1176,11 +1176,16 @@ input, select, textarea {
   grid-template-columns: 1fr 1fr;
   gap: 14px 10px;
 }
+/* 필드 라벨 — 라벨(구분)과 그 아래/옆의 선택지(항목)가 확실히 갈리도록
+   굵고 진한 잉크색을 쓴다. 옅은 회색 note 톤을 쓰면 칩 텍스트와 비슷해
+   보여서 "이게 라벨인지 선택지인지" 헷갈린다. */
 .deflab {
   display: block;
   font-size: 12px;
   font-weight: 600;
   color: var(--ink);
+}
+.defcell .deflab {
   margin-bottom: 6px;
 }
 .defcell .chips {

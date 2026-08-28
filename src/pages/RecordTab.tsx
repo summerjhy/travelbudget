@@ -169,7 +169,7 @@ export function RecordTab() {
           title: p.title,
           category: p.category,
           date: p.date ?? todayForTrip(trip),
-          time: '',
+          time: nowForTrip(trip),
           currency: p.currency,
           ...toMoneyFields(p.amount, p.currency),
           rate: '',
@@ -238,7 +238,7 @@ export function RecordTab() {
             title: r.merchant || '지출',
             category: guessCategory(r.merchant || ''),
             date: r.date ?? defaultDate,
-            time: r.time ?? '',
+            time: r.time ?? nowForTrip(trip),
             currency: itemCurrency,
             ...toMoneyFields(amount, itemCurrency),
             rate: '',
@@ -561,7 +561,13 @@ export function RecordTab() {
             <div className="prev" key={i}>
               <div className="l1">
                 <input value={p.title} onChange={(e) => updatePreviewItem(i, { title: e.target.value })} />
-                <button className="chip" onClick={() => removePreviewItem(i)}>이 항목 삭제</button>
+                <button
+                  className="btn warn sm"
+                  style={{ width: 'auto', flexShrink: 0 }}
+                  onClick={() => removePreviewItem(i)}
+                >
+                  이 항목 삭제
+                </button>
               </div>
               <EntryFields
                 value={p}
