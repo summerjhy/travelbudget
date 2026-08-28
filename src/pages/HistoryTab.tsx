@@ -329,7 +329,7 @@ export function HistoryTab() {
                     <Pair amount={e.cny} krw={e.krw} currency={entryCurrency(e)} />
                   </div>
                   <div className="meta">
-                    {e.date.slice(5).replace('-', '/')}{e.time ? ` ${e.time}` : ''} · {categoryChip(e.category)} ·{' '}
+                    {e.time && <>{e.time} · </>}{categoryChip(e.category)} ·{' '}
                     <span style={{ color: e.member_id ? 'var(--marigold)' : 'var(--jade)' }}>
                       {e.member_id
                         ? owner
@@ -337,7 +337,9 @@ export function HistoryTab() {
                           : '개인'
                         : '공금'}
                     </span>
-                    {' · '}{paymentChip(e.payment_method)}
+                  </div>
+                  <div className="meta">
+                    {paymentChip(e.payment_method)}
                     {payer && <> · 결제 <MemberName emoji={payer.emoji} name={payer.personName} /></>}
                     {shownRate && <> · {shownRate}</>}
                     {e.pending && <span style={{ color: 'var(--marigold)' }}> · 동기화 대기중</span>}
