@@ -56,7 +56,7 @@ export function EntryFields({
     <>
       {currencies.length > 1 && (
         <div className="chips" style={{ marginBottom: 8 }}>
-          <span className="note" style={{ marginRight: 4 }}>💱 입력 단위</span>
+          <span className="deflab">💱 입력 단위</span>
           {currencies.map((c) => (
             <button
               key={c}
@@ -121,7 +121,7 @@ export function EntryFields({
       )}
 
       <div className="chips" style={{ marginBottom: 8 }}>
-        <span className="note" style={{ marginRight: 4, flexBasis: '100%' }}>🗂️ 카테고리</span>
+        <span className="deflab" style={{ flexBasis: '100%', marginBottom: 4 }}>🗂️ 카테고리</span>
         {CATEGORY_NAMES.map((c) => (
           <button
             key={c}
@@ -134,7 +134,7 @@ export function EntryFields({
       </div>
 
       <div className="chips" style={{ marginBottom: 8 }}>
-        <span className="note" style={{ marginRight: 4 }}>💳 결제 수단</span>
+        <span className="deflab">💳 결제 수단</span>
         {PAYMENT_METHODS.map((m) => (
           <button
             key={m.code}
@@ -149,7 +149,7 @@ export function EntryFields({
       {members.length > 0 && (
         <>
           <div className="chips" style={{ marginBottom: 8 }}>
-            <span className="note" style={{ marginRight: 4 }}>🙋 결제자</span>
+            <span className="deflab">🙋 결제자</span>
             {members.map((m) => (
               <button
                 key={m.id}
@@ -162,7 +162,7 @@ export function EntryFields({
           </div>
 
           <div className="chips" style={{ marginBottom: 8 }}>
-            <span className="note" style={{ marginRight: 4 }}>🏷️ 비용 구분</span>
+            <span className="deflab">🏷️ 비용 구분</span>
             <button
               className={'chip fund' + (value.memberId === null ? ' on' : '')}
               onClick={() => onChange({ memberId: null })}
