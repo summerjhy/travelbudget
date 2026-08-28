@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { Trip } from '../lib/types'
 import type { SettlementResult } from '../lib/settlement'
 import { settlementToCsv, settlementToText, settlementFileName } from '../lib/settlementExport'
-import { deliver, type DeliverResult } from '../lib/export'
+import { deliverFile, deliverText, type DeliverResult } from '../lib/export'
 
 interface Props {
   trip: Trip
@@ -29,9 +29,13 @@ export function SettlementExportModal({ trip, result, onClose }: Props) {
     setFallbackText(null)
 
     const content = kind === 'csv' ? settlementToCsv(result, { trip }) : settlementToText(result, { trip })
-    const mime = kind === 'csv' ? 'text/csv;charset=utf-8' : 'text/plain;charset=utf-8'
 
-    const deliverResult = await deliver(content, settlementFileName(trip, kind), mime)
+    // 카톡용 텍스트는 파일이 아니라 텍스트 자체를 공유한다(인코딩 오독 방지,
+    // 공유 시트에서 바로 메시지창에 붙는 흐름). CSV는 파일이어야 뜻이 있다.
+    const deliverResult =
+      kind === 'csv'
+        ? await deliverFile(content, settlementFileName(trip, kind), 'text/csv;charset=utf-8')
+        : await deliverText(content)
     setBusy(false)
 
     if (deliverResult === 'manual') {

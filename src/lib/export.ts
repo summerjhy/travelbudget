@@ -112,25 +112,50 @@ export function exportFileName(trip: Trip, ext: string): string {
 export type DeliverResult = 'download' | 'share' | 'clipboard' | 'manual'
 
 /**
- * 만든 파일을 사용자에게 건넨다.
+ * 텍스트(카톡용)를 사용자에게 건넨다.
  *
- * iOS 홈 화면 앱(standalone)은 <a download> 가 동작하지 않는다. 그래서
- * 다운로드 -> 공유 시트 -> 클립보드 순으로 내려간다. 전부 막히면 'manual'
- * 을 돌려주고 호출부가 화면에 내용을 띄워 직접 복사하게 한다.
+ * 파일이 아니라 문자열 자체를 공유 시트로 넘긴다 — 파일로 보내면 받는
+ * 쪽 앱(특히 카톡)이 그 파일의 인코딩을 잘못 짐작해 열었을 때 깨져
+ * 보이는 경우가 있고, 애초에 "내용을 열어야 보이는 파일"보다 "공유
+ * 시트에서 바로 메시지창에 붙는 텍스트"가 카톡 등으로 보내기에 더
+ * 자연스럽다. 공유가 막힌 환경(데스크톱 등)에서는 클립보드로 내려간다.
  */
-export async function deliver(
+export async function deliverText(content: string): Promise<DeliverResult> {
+  if (navigator.canShare?.({ text: content })) {
+    try {
+      await navigator.share({ text: content })
+      return 'share'
+    } catch (err) {
+      // 사용자가 공유 시트를 닫은 것뿐이면 다른 경로로 넘어가지 않는다.
+      if (err instanceof DOMException && err.name === 'AbortError') return 'share'
+    }
+  }
+
+  try {
+    await navigator.clipboard.writeText(content)
+    return 'clipboard'
+  } catch {
+    return 'manual'
+  }
+}
+
+/**
+ * 만든 파일을 사용자에게 건넨다 (CSV 등 파일이어야 뜻이 있는 형식).
+ *
+ * 공유 시트(다른 앱으로 보내기)를 다운로드보다 먼저 시도한다 — 모바일에서
+ * "파일로 저장한 뒤 그 파일을 찾아서 공유"보다 "공유 버튼 누르면 바로
+ * 카톡/다른 앱 선택창이 뜨는" 흐름을 기대하기 때문이다. 공유가 안 되는
+ * 환경(대부분의 데스크톱 브라우저)에서만 다운로드로 내려간다. 전부 막히면
+ * 'manual'을 돌려주고 호출부가 화면에 내용을 띄워 직접 복사하게 한다.
+ */
+export async function deliverFile(
   content: string,
   fileName: string,
   mime: string,
 ): Promise<DeliverResult> {
   const file = new File([content], fileName, { type: mime })
 
-  // iOS 홈 화면 앱은 다운로드가 막혀 있으니 공유 시트를 먼저 시도한다.
-  const standalone =
-    window.matchMedia('(display-mode: standalone)').matches ||
-    ('standalone' in navigator && (navigator as { standalone?: boolean }).standalone === true)
-
-  if (standalone && navigator.canShare?.({ files: [file] })) {
+  if (navigator.canShare?.({ files: [file] })) {
     try {
       await navigator.share({ files: [file], title: fileName })
       return 'share'
@@ -153,15 +178,6 @@ export async function deliver(
     return 'download'
   } catch {
     /* 아래로 */
-  }
-
-  if (navigator.canShare?.({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title: fileName })
-      return 'share'
-    } catch {
-      /* 아래로 */
-    }
   }
 
   try {

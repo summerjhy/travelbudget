@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import type { Trip } from '../lib/types'
 import type { MemberWithName } from '../lib/useTripMembers'
 import type { PendingEntry } from '../lib/useEntries'
-import { deliver, exportFileName, toCsv, toText, type DeliverResult } from '../lib/export'
+import { deliverFile, deliverText, exportFileName, toCsv, toText, type DeliverResult } from '../lib/export'
 import { won } from '../lib/format'
 
 interface Props {
@@ -81,10 +81,14 @@ export function ExportPanel({ trip, members, entries }: Props) {
     // 파일 안에서는 날짜 오름차순이 읽기 좋다.
     const rows = [...selected].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
     const ctx = { trip, members }
-    const content = kind === 'csv' ? toCsv(rows, ctx) : toText(rows, ctx)
-    const mime = kind === 'csv' ? 'text/csv;charset=utf-8' : 'text/plain;charset=utf-8'
 
-    const result = await deliver(content, exportFileName(trip, kind), mime)
+    // 카톡용 텍스트는 파일이 아니라 텍스트 자체를 공유한다(인코딩 오독 방지,
+    // 공유 시트에서 바로 메시지창에 붙는 흐름). CSV는 파일이어야 뜻이 있다.
+    const content = kind === 'csv' ? toCsv(rows, ctx) : toText(rows, ctx)
+    const result =
+      kind === 'csv'
+        ? await deliverFile(content, exportFileName(trip, kind), 'text/csv;charset=utf-8')
+        : await deliverText(content)
     setBusy(false)
 
     if (result === 'manual') {
