@@ -61,7 +61,7 @@ export function EntryFields({
     <>
       {currencies.length > 1 && (
         <div className="chips" style={{ marginBottom: 8 }}>
-          <span className="deflab">💱 입력 단위</span>
+          <span className="deflab">입력 단위</span>
           {currencies.map((c) => (
             <button
               key={c}
@@ -89,6 +89,7 @@ export function EntryFields({
             <span>{currencySuffix(value.currency)}</span>
           </label>
         )}
+        {isForeign && <span className="eq" aria-hidden="true">=</span>}
         <label>
           <input
             inputMode="numeric"
@@ -125,46 +126,19 @@ export function EntryFields({
         </>
       )}
 
-      <div className="fieldrow">
-        <span className="deflab">🗂️ 카테고리</span>
-        <select className="inp sel" value={value.category} onChange={(ev) => onChange({ category: ev.target.value })}>
-          {CATEGORY_NAMES.map((c) => (
-            <option key={c} value={c}>{categoryChip(c)}</option>
-          ))}
-        </select>
-      </div>
+      <div className="deftable" style={{ margin: '9px 0' }}>
+        <div className="defcell">
+          <span className="deflab">🗂️ 카테고리</span>
+          <select className="inp sel" value={value.category} onChange={(ev) => onChange({ category: ev.target.value })}>
+            {CATEGORY_NAMES.map((c) => (
+              <option key={c} value={c}>{categoryChip(c)}</option>
+            ))}
+          </select>
+        </div>
 
-      <div className="fieldrow">
-        <span className="deflab">💳 결제 수단</span>
-        <select
-          className="inp sel"
-          value={value.paymentMethod}
-          onChange={(ev) => onChange({ paymentMethod: ev.target.value })}
-        >
-          {PAYMENT_METHODS.map((m) => (
-            <option key={m.code} value={m.code}>{paymentChip(m.code)}</option>
-          ))}
-        </select>
-      </div>
-
-      {members.length > 0 && (
-        <>
-          <div className="fieldrow">
-            <span className="deflab">🙋 결제자</span>
-            <select
-              className="inp sel"
-              value={value.paidBy ?? ''}
-              onChange={(ev) => onChange({ paidBy: ev.target.value || null })}
-            >
-              <option value="">미지정</option>
-              {members.map((m) => (
-                <option key={m.id} value={m.id}>{m.emoji ? `${m.emoji} ${m.personName}` : m.personName}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="fieldrow">
-            <span className="deflab">🏷️ 비용 구분</span>
+        {members.length > 0 && (
+          <div className="defcell">
+            <span className="deflab">비용 구분</span>
             <select
               className="inp sel"
               value={value.memberId ?? ''}
@@ -176,10 +150,39 @@ export function EntryFields({
               ))}
             </select>
           </div>
-        </>
-      )}
+        )}
 
-      <div className="editrow">
+        <div className="defcell">
+          <span className="deflab">결제 수단</span>
+          <select
+            className="inp sel"
+            value={value.paymentMethod}
+            onChange={(ev) => onChange({ paymentMethod: ev.target.value })}
+          >
+            {PAYMENT_METHODS.map((m) => (
+              <option key={m.code} value={m.code}>{paymentChip(m.code)}</option>
+            ))}
+          </select>
+        </div>
+
+        {members.length > 0 && (
+          <div className="defcell">
+            <span className="deflab">결제자</span>
+            <select
+              className="inp sel"
+              value={value.paidBy ?? ''}
+              onChange={(ev) => onChange({ paidBy: ev.target.value || null })}
+            >
+              <option value="">미지정</option>
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>{m.emoji ? `${m.emoji} ${m.personName}` : m.personName}</option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+
+      <div className="editrow compact">
         <input className="inp" type="date" value={value.date} onChange={(ev) => onChange({ date: ev.target.value })} style={{ flex: 1 }} />
         <input className="inp" type="time" value={value.time} onChange={(ev) => onChange({ time: ev.target.value })} style={{ flex: '0 0 40%' }} />
       </div>
