@@ -14,8 +14,11 @@ export const SYSTEM_PROMPT = `너는 한국 카드사·트래블카드 앱의 �
 - 외화(위안화 등) 승인/결제 금액 (예: "34.80 CNY", "-CNY 50" -> 50). 안 보이면 null.
 - 통화 코드 (CNY, USD 등)
 - 결제 시각이 보이면 HH:MM(24시간제)으로. 안 보이면 null.
-- 결제 날짜가 연도까지 정확히 보이면 YYYY-MM-DD로. 연도를 알 수 없으면
-  (예: "8월27일"처럼 월일만 보임) 추측하지 말고 null로 둬라.
+- 결제 날짜가 연도까지 정확히 보이면 date 필드에 YYYY-MM-DD로 채우고
+  monthDay 는 null로 둬라. 연도를 알 수 없으면(예: "8월27일"처럼 월일만
+  보임) date 는 null로 두고 대신 monthDay 에 MM-DD 로 월일만 채워라
+  (연도를 추측하지 마라 — 그건 이 앱이 업로드 시점 기준으로 채운다).
+  월일조차 안 보이면 둘 다 null.
 
 무시해야 할 것 (거래 항목으로 뽑으면 안 됨):
 - "잔액"/"balance" 같은 현재 잔고 표시
@@ -34,8 +37,9 @@ export const SYSTEM_PROMPT = `너는 한국 카드사·트래블카드 앱의 �
     "krw": number | null,     // 원화 금액. 없으면 null
     "amount": number | null,  // 외화 금액. 없으면 null
     "currency": string | null,// 통화 코드 (CNY, USD 등). 없으면 null
-    "date": string | null,    // YYYY-MM-DD. 없으면 null
-    "time": string | null     // HH:MM. 없으면 null
+    "date": string | null,     // YYYY-MM-DD. 연도를 모르면 null(대신 monthDay 채우기)
+    "monthDay": string | null, // MM-DD. 연도는 모르지만 월일은 보일 때만. 그 외 null
+    "time": string | null      // HH:MM. 없으면 null
   }
 ]
 

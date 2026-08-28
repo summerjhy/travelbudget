@@ -17,8 +17,12 @@ interface GeminiParsedResult {
   amount: number | null
   currency: string | null
   date: string | null
+  monthDay: string | null
   time: string | null
 }
+
+/** 사진 한 장의 실패 사유. 클라이언트가 이유별로 다른 안내를 보여준다. */
+type FailReason = 'overloaded' | 'quota' | 'other'
 
 const MAX_ITEMS_PER_IMAGE = 20
 
@@ -35,7 +39,16 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-async function callGeminiOnce(apiKey: string, imageBase64: string): Promise<{ result: GeminiParsedResult[] | null; status?: number }> {
+function reasonForStatus(status: number): FailReason {
+  if (status === 503) return 'overloaded'
+  if (status === 429) return 'quota'
+  return 'other'
+}
+
+async function callGeminiOnce(
+  apiKey: string,
+  imageBase64: string,
+): Promise<{ result: GeminiParsedResult[] | null; status?: number }> {
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
     {
@@ -87,16 +100,30 @@ async function callGeminiOnce(apiKey: string, imageBase64: string): Promise<{ re
   return { result: list.slice(0, MAX_ITEMS_PER_IMAGE) as GeminiParsedResult[] }
 }
 
-// 503(일시적 과부하)만 1회 재시도한다. 429(할당량 초과)는 재시도하지 않고 그 사진만 실패 처리한다.
-// 여러 장을 병렬로 보내므로, 한 장의 429/503이 다른 장의 처리를 막지 않는다.
-async function callGemini(apiKey: string, imageBase64: string): Promise<GeminiParsedResult[] | null> {
+/**
+ * 503(일시적 과부하)만 1회 재시도한다. 429(할당량 초과)는 재시도하지 않고
+ * 그 사진만 실패 처리한다. 여러 장을 병렬로 보내므로, 한 장의 429/503이
+ * 다른 장의 처리를 막지 않는다.
+ *
+ * 실패 사유(reason)를 함께 돌려준다 — 클라이언트가 "서버가 붐벼요, 나중에
+ * 다시 시도해주세요"(overloaded)와 "그냥 인식이 안 됐어요, 직접입력
+ * 해주세요"(other)를 구분해서 안내할 수 있어야 하기 때문이다.
+ */
+async function callGemini(
+  apiKey: string,
+  imageBase64: string,
+): Promise<{ result: GeminiParsedResult[] | null; reason: FailReason | null }> {
   const first = await callGeminiOnce(apiKey, imageBase64)
-  if (first.result !== null || first.status !== 503) return first.result
+  if (first.result !== null) return { result: first.result, reason: null }
+  if (first.status !== 503) {
+    return { result: null, reason: first.status ? reasonForStatus(first.status) : 'other' }
+  }
 
   console.log('Gemini 503, retrying once after 2s')
   await sleep(2000)
   const second = await callGeminiOnce(apiKey, imageBase64)
-  return second.result
+  if (second.result !== null) return { result: second.result, reason: null }
+  return { result: null, reason: second.status ? reasonForStatus(second.status) : 'other' }
 }
 
 Deno.serve(async (req: Request) => {
@@ -143,8 +170,9 @@ Deno.serve(async (req: Request) => {
 
   // 여러 장을 동시에 보낸다. 한 장이 실패(429/타임아웃 등)해도 나머지는 계속 처리된다.
   const settled = await Promise.allSettled(body.images.map((image) => callGemini(geminiApiKey, image)))
-  const results = settled.map((s) => (s.status === 'fulfilled' ? s.value : null))
+  const results = settled.map((s) => (s.status === 'fulfilled' ? s.value.result : null))
+  const reasons = settled.map((s) => (s.status === 'fulfilled' ? s.value.reason : 'other' as FailReason))
 
   // 이미지는 파싱 후 즉시 폐기한다(저장하지 않음) — SPEC 6-1 준수.
-  return jsonResponse({ results }, 200)
+  return jsonResponse({ results, reasons }, 200)
 })

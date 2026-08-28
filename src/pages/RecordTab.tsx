@@ -26,7 +26,7 @@ import {
 } from '../lib/session'
 import { DEFAULT_PAYMENT_METHOD, PAYMENT_METHODS, isPaymentMethod, paymentChip } from '../lib/payment'
 import { resizeAndCompressMany } from '../lib/imageResize'
-import { parseImages } from '../lib/parseImage'
+import { parseImages, type ImageParseResult } from '../lib/parseImage'
 import { consumeSharedFiles, takeShareFlag } from '../lib/shareTarget'
 import { Pair } from '../components/Pair'
 import { MemberName } from '../components/MemberName'
@@ -211,8 +211,20 @@ export function RecordTab() {
       }
 
       const defaultDate = todayForTrip(trip)
+      // 캡쳐에 월일만 보이고 연도가 없으면(예: "8월27일"), 그 연도를 추측하는 대신
+      // 이 사진을 업로드한(=분석을 돌린) 시점 기준 연도를 붙인다. 여행 중 캡쳐는
+      // 대개 그날 또는 며칠 안에 바로 업로드하므로 업로드 시점 연도가 맞다.
+      const uploadYear = yearForTrip(trip)
+      function resolveDate(r: ImageParseResult): string {
+        if (r.date) return r.date
+        if (r.monthDay) return `${uploadYear}-${r.monthDay}`
+        return defaultDate
+      }
+
       const newItems: PreviewItem[] = []
       let failCount = 0
+      const reasons = result.reasons ?? []
+      const overloadedCount = reasons.filter((r) => r === 'overloaded').length
       // 사진 한 장이 목록형 이용내역이면 거래가 여러 건 나올 수 있다 —
       // 각 사진의 결과 배열을 펼쳐서 항목마다 미리보기 카드를 하나씩 만든다.
       for (const list of result.results) {
@@ -237,7 +249,7 @@ export function RecordTab() {
           newItems.push({
             title: r.merchant || '지출',
             category: guessCategory(r.merchant || ''),
-            date: r.date ?? defaultDate,
+            date: resolveDate(r),
             time: r.time ?? nowForTrip(trip),
             currency: itemCurrency,
             ...toMoneyFields(amount, itemCurrency),
@@ -256,6 +268,12 @@ export function RecordTab() {
       // 화면 아래 텍스트로만 알리면 놓치기 쉬워서, 확인을 누르기 전까지
       // 화면 가운데 붙잡아 두는 모달로 항상 결과를 알린다.
       const okCount = files.length - failCount
+      // 서버 과부하(503)로 실패한 장이 있으면 "인식이 안 됐다"가 아니라
+      // "지금 서버가 붐빈다"는 걸 명확히 알려서, 사용자가 사진 각도를 바꾸는 등
+      // 헛수고하지 않고 텍스트 직접입력이나 나중 재시도를 택하게 한다.
+      const overloadedNote = overloadedCount > 0
+        ? `\n(사진 분석 서버 수요가 많아 ${overloadedCount}장은 실패했어요. 잠시 후 다시 시도하거나 텍스트로 직접 입력해주세요.)`
+        : ''
       if (failCount === 0) {
         setPhotoResult({
           title: '✅ 분석 완료',
@@ -263,13 +281,15 @@ export function RecordTab() {
         })
       } else if (okCount === 0) {
         setPhotoResult({
-          title: '❌ 인식 실패',
-          body: `사진 ${files.length}장 모두에서 지출을 찾지 못했어요.\n직접입력을 이용해주세요.`,
+          title: overloadedCount === files.length ? '⏳ 서버가 붐벼요' : '❌ 인식 실패',
+          body: overloadedCount === files.length
+            ? `사진 분석 서버 수요가 많아 지금은 분석할 수 없어요.\n잠시 후 다시 시도하거나 텍스트로 직접 입력해주세요.`
+            : `사진 ${files.length}장 모두에서 지출을 찾지 못했어요.\n직접입력을 이용해주세요.`,
         })
       } else {
         setPhotoResult({
           title: '⚠️ 일부만 인식',
-          body: `사진 ${files.length}장 중 ${newItems.length}건을 찾았어요.\n${failCount}장은 인식하지 못해 직접입력이 필요해요.`,
+          body: `사진 ${files.length}장 중 ${newItems.length}건을 찾았어요.\n${failCount}장은 인식하지 못해 직접입력이 필요해요.${overloadedNote}`,
         })
       }
     } finally {
