@@ -67,7 +67,7 @@ export function settlementToText(result: SettlementResult, ctx: Ctx): string {
   out.push(`${ctx.trip.name} 최종 정산`)
   out.push('')
 
-  out.push(`1. 공금 사용 총액 (총 ${result.budgetAnalysis.fundN}건) : 합계 ${won(result.budgetAnalysis.fund)}`)
+  out.push(`1. 공금 사용 총액 (${result.budgetAnalysis.fundN}건) : 합계 ${won(result.budgetAnalysis.fund)}`)
   out.push('· 일자별')
   for (const d of result.fundByDate) out.push(`  └ ${d.date}  ${won(d.krw)} (${d.n}건)`)
   out.push('· 카테고리별')
@@ -90,15 +90,15 @@ export function settlementToText(result: SettlementResult, ctx: Ctx): string {
 
   out.push('3. 개인경비 지출 현황 분석')
   for (const p of result.personalExpenses) {
-    out.push(`· ${p.name} : ${won(p.krw)} (총 ${p.n}건)`)
+    out.push(`· ${p.name} : ${won(p.krw)} (${p.n}건)`)
   }
   out.push('')
 
   out.push('4. 결제자별 총액')
   for (const p of result.payerSummaries) {
-    out.push(`· ${p.name} : ${won(p.paidTotal)} (총 ${p.paidTotalN}건)`)
+    out.push(`· ${p.name} : ${won(p.paidTotal)} (${p.paidTotalN}건)`)
     if (p.otherBurdenPaidN > 0) {
-      out.push(`  └ 예산 초과분 & 개인경비 금액 결제금액 : ${won(p.otherBurdenPaid)} (총 ${p.otherBurdenPaidN}건)`)
+      out.push(`  └ 예산 초과분 & 개인경비 금액 결제금액 : ${won(p.otherBurdenPaid)} (${p.otherBurdenPaidN}건)`)
     }
   }
   out.push('')
