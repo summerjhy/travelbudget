@@ -34,6 +34,7 @@ function jsonResponse(body: unknown, status: number) {
 }
 
 const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') || 'gemini-flash-latest'
+const CLAUDE_MODEL = Deno.env.get('CLAUDE_MODEL') || 'claude-haiku-4-5'
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -126,6 +127,94 @@ async function callGemini(
   return { result: null, reason: second.status ? reasonForStatus(second.status) : 'other' }
 }
 
+/**
+ * Gemini가 과부하(503)나 할당량 초과(429)로 실패했을 때만 쓰는 유료 폴백.
+ * Claude Haiku 4.5는 저렴하고(이미지 1장당 1원 단위) 이 작업(화면에서
+ * 텍스트를 읽어 JSON으로 옮기는 단순 추출)에 충분한 성능이라 골랐다.
+ * 평소엔 무료인 Gemini만 쓰고, Gemini가 막혔을 때만 비용이 발생한다.
+ */
+async function callClaudeOnce(
+  apiKey: string,
+  imageBase64: string,
+): Promise<{ result: GeminiParsedResult[] | null }> {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: CLAUDE_MODEL,
+      max_tokens: 4096,
+      system: SYSTEM_PROMPT,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: imageBase64 } },
+            { type: 'text', text: '위 화면을 분석해서 지시된 JSON 스키마로만 응답해줘.' },
+          ],
+        },
+      ],
+    }),
+  })
+
+  if (!res.ok) {
+    const errBody = await res.text()
+    console.error('Claude API error', res.status, errBody)
+    return { result: null }
+  }
+
+  const data = await res.json()
+  const text = data?.content?.find((b: { type: string }) => b.type === 'text')?.text
+  if (!text) {
+    console.error('Claude response has no text', JSON.stringify(data))
+    return { result: null }
+  }
+
+  let parsed: unknown
+  try {
+    // Claude는 시스템 프롬프트에 "JSON만 응답"이라고 지시해도 가끔 코드블록(```json ... ```)으로
+    // 감싸서 답할 때가 있다. Gemini는 responseMimeType 강제라 이 문제가 없지만 Claude API엔
+    // 그런 강제 옵션이 없어 방어적으로 벗겨낸다.
+    const stripped = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '')
+    parsed = JSON.parse(stripped)
+  } catch {
+    console.error('Claude response text is not valid JSON', text)
+    return { result: null }
+  }
+
+  const list = Array.isArray(parsed) ? parsed : [parsed]
+  return { result: list.slice(0, MAX_ITEMS_PER_IMAGE) as GeminiParsedResult[] }
+}
+
+/**
+ * Gemini가 overloaded/quota로 실패했을 때만 Claude로 넘어간다. Gemini가
+ * 응답 형식 오류 등(other)으로 실패했을 때는 같은 이미지를 다른 모델에
+ * 줘도 대개 같은 종류의 문제(글자가 안 보이는 캡처 등)일 가능성이 높아
+ * 굳이 유료 호출을 쓰지 않는다 — overloaded/quota만 "우리 쪽이 아니라
+ * Gemini 서버 사정"이라 폴백할 가치가 있다.
+ */
+async function callGeminiWithFallback(
+  geminiApiKey: string,
+  claudeApiKey: string | null,
+  imageBase64: string,
+): Promise<{ result: GeminiParsedResult[] | null; reason: FailReason | null; usedFallback: boolean }> {
+  const primary = await callGemini(geminiApiKey, imageBase64)
+  if (primary.result !== null) return { ...primary, usedFallback: false }
+  if (!claudeApiKey || (primary.reason !== 'overloaded' && primary.reason !== 'quota')) {
+    return { ...primary, usedFallback: false }
+  }
+
+  console.log(`Gemini failed (${primary.reason}), falling back to Claude`)
+  const fallback = await callClaudeOnce(claudeApiKey, imageBase64)
+  if (fallback.result !== null) return { result: fallback.result, reason: null, usedFallback: true }
+  // Claude도 실패하면 원래 Gemini 실패 사유를 그대로 클라이언트에 전달한다
+  // (Claude 실패는 부가 정보일 뿐, 사용자에게 보여줄 주된 사유는 Gemini 쪽이다).
+  return { result: null, reason: primary.reason, usedFallback: false }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -144,6 +233,8 @@ Deno.serve(async (req: Request) => {
   if (!geminiApiKey) {
     return jsonResponse({ error: '서버에 Gemini API 키가 설정되지 않았습니다.' }, 500)
   }
+  // 없어도 그냥 폴백 없이 Gemini만 쓴다 — 필수 시크릿이 아니다.
+  const claudeApiKey = Deno.env.get('ANTHROPIC_API_KEY') || null
 
   let body: ParseImageBody
   try {
@@ -169,9 +260,13 @@ Deno.serve(async (req: Request) => {
   }
 
   // 여러 장을 동시에 보낸다. 한 장이 실패(429/타임아웃 등)해도 나머지는 계속 처리된다.
-  const settled = await Promise.allSettled(body.images.map((image) => callGemini(geminiApiKey, image)))
+  const settled = await Promise.allSettled(
+    body.images.map((image) => callGeminiWithFallback(geminiApiKey, claudeApiKey, image)),
+  )
   const results = settled.map((s) => (s.status === 'fulfilled' ? s.value.result : null))
   const reasons = settled.map((s) => (s.status === 'fulfilled' ? s.value.reason : 'other' as FailReason))
+  const usedFallbackCount = settled.filter((s) => s.status === 'fulfilled' && s.value.usedFallback).length
+  if (usedFallbackCount > 0) console.log(`Claude fallback used for ${usedFallbackCount}/${body.images.length} image(s)`)
 
   // 이미지는 파싱 후 즉시 폐기한다(저장하지 않음) — SPEC 6-1 준수.
   return jsonResponse({ results, reasons }, 200)
