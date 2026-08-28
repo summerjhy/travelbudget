@@ -67,54 +67,49 @@ export function settlementToText(result: SettlementResult, ctx: Ctx): string {
   out.push(`${ctx.trip.name} 최종 정산`)
   out.push('')
 
-  out.push(`1. 공금 사용 총액 (총 ${result.budgetAnalysis.fundN}건)`)
-  out.push(`합계 ${won(result.budgetAnalysis.fund)}`)
+  out.push(`1. 공금 사용 총액 (총 ${result.budgetAnalysis.fundN}건) : 합계 ${won(result.budgetAnalysis.fund)}`)
   out.push('· 일자별')
-  for (const d of result.fundByDate) out.push(`  ${d.date}  ${won(d.krw)} (${d.n}건)`)
+  for (const d of result.fundByDate) out.push(`  └ ${d.date}  ${won(d.krw)} (${d.n}건)`)
   out.push('· 카테고리별')
-  for (const c of result.fundByCategory) out.push(`  ${c.category}  ${won(c.krw)} (${c.n}건)`)
+  for (const c of result.fundByCategory) out.push(`  └ ${c.category}  ${won(c.krw)} (${c.n}건)`)
   out.push('')
 
   out.push('2. 예산 대비 공금사용현황 분석')
-  out.push(`총 예산  ${won(result.budgetAnalysis.budget)}`)
-  out.push(`총 공금 사용액  ${won(result.budgetAnalysis.fund)} (${result.budgetAnalysis.fundN}건)`)
+  out.push(`· 총 예산  ${won(result.budgetAnalysis.budget)}`)
+  out.push(`· 총 공금 사용액  ${won(result.budgetAnalysis.fund)} (${result.budgetAnalysis.fundN}건)`)
   const diff = result.budgetAnalysis.diff
   const perHead = result.budgetAnalysis.perMemberAdjustment
   if (diff > 0) {
-    out.push(`초과 예산  ${won(diff)} (인당 ${won(perHead)} 추가 부담)`)
+    out.push(`· 초과 예산  ${won(diff)} (인당 ${won(perHead)} 추가 부담)`)
   } else if (diff < 0) {
-    out.push(`잔여 예산  ${won(-diff)} (인당 ${won(-perHead)} 환급)`)
+    out.push(`· 잔여 예산  ${won(-diff)} (인당 ${won(-perHead)} 환급)`)
   } else {
-    out.push('예산을 딱 맞춰 썼어요.')
+    out.push('· 예산을 딱 맞춰 썼어요.')
   }
   out.push('')
 
   out.push('3. 개인경비 지출 현황 분석')
   for (const p of result.personalExpenses) {
-    out.push(`${p.name} : ${won(p.krw)} (총 ${p.n}건)`)
+    out.push(`· ${p.name} : ${won(p.krw)} (총 ${p.n}건)`)
   }
   out.push('')
 
   out.push('4. 결제자별 총액')
   for (const p of result.payerSummaries) {
-    out.push(`${p.name} : ${won(p.paidTotal)} (총 ${p.paidTotalN}건)`)
-    out.push(`  └ 예산 초과분 & 개인경비 금액 결제금액 : ${won(p.otherBurdenPaid)} (총 ${p.otherBurdenPaidN}건)`)
+    out.push(`· ${p.name} : ${won(p.paidTotal)} (총 ${p.paidTotalN}건)`)
+    if (p.otherBurdenPaidN > 0) {
+      out.push(`  └ 예산 초과분 & 개인경비 금액 결제금액 : ${won(p.otherBurdenPaid)} (총 ${p.otherBurdenPaidN}건)`)
+    }
   }
   out.push('')
 
   out.push('5. 예산 초과분 및 개인경비 결제건 정산 안내')
-  const byReceiver = new Map<string, { toName: string; items: { fromName: string; amount: number }[] }>()
-  for (const t of result.transfers) {
-    const g = byReceiver.get(t.to) ?? { toName: t.toName, items: [] }
-    g.items.push({ fromName: t.fromName, amount: t.amount })
-    byReceiver.set(t.to, g)
-  }
-  if (byReceiver.size === 0) {
+  if (result.transfers.length === 0) {
     out.push('이체할 금액이 없어요.')
   } else {
-    for (const g of byReceiver.values()) {
-      out.push(`${g.toName}에게 각각 아래 금액을 이체해주세요 ❤️`)
-      for (const item of g.items) out.push(`  ${item.fromName} : ${won(item.amount)}`)
+    out.push('· 각각 아래의 금액을 이체해주세요.')
+    for (const t of result.transfers) {
+      out.push(`  └ ${t.fromName}  → ${t.toName} : ${won(t.amount)}`)
     }
   }
 
