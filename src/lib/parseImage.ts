@@ -7,11 +7,17 @@ export interface ImageParseResult {
   amount: number | null
   currency: string | null
   date: string | null
+  /** HH:MM. 목록형 이용내역처럼 화면에 시각이 보일 때만 채워진다. */
+  time: string | null
 }
 
 export interface ParseImagesResponse {
   ok: boolean
-  results?: (ImageParseResult | null)[]
+  /**
+   * 사진 한 장당 하나. 그 사진에서 읽은 거래 배열(단건 화면이면 1개,
+   * 목록형 화면이면 여러 개), 못 읽었으면 null.
+   */
+  results?: (ImageParseResult[] | null)[]
   error?: string
 }
 
