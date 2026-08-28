@@ -27,6 +27,7 @@ import { parseImages } from '../lib/parseImage'
 import { consumeSharedFiles, takeShareFlag } from '../lib/shareTarget'
 import { Pair } from '../components/Pair'
 import { MemberName } from '../components/MemberName'
+import { ResultModal } from '../components/ResultModal'
 import type { Entry } from '../lib/types'
 import { nowForTrip, todayForTrip, yearForTrip } from '../lib/tripDate'
 
@@ -54,6 +55,7 @@ export function RecordTab() {
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [parsingImages, setParsingImages] = useState(false)
+  const [photoResult, setPhotoResult] = useState<{ title: string; body: string } | null>(null)
   const [lastSavedIds, setLastSavedIds] = useState<string[] | null>(null)
   const [currency, setCurrencyState] = useState<string | null>(null)
   const [payment, setPaymentState] = useState<string | null>(null)
@@ -174,7 +176,10 @@ export function RecordTab() {
       const images = await resizeAndCompressMany(files)
       const result = await parseImages(trip.code, images)
       if (!result.ok || !result.results) {
-        setError(result.error ?? '사진을 분석하지 못했어요. 직접입력을 이용해주세요.')
+        setPhotoResult({
+          title: '❌ 분석 실패',
+          body: result.error ?? '사진을 분석하지 못했어요. 직접입력을 이용해주세요.',
+        })
         return
       }
 
@@ -217,8 +222,26 @@ export function RecordTab() {
         if (addedFromThisImage === 0) failCount++
       }
       setPreview((prev) => [...prev, ...newItems])
-      if (failCount > 0) {
-        setError(`${failCount}장은 인식하지 못했어요. 직접입력으로 추가해주세요.`)
+
+      // 30~40초씩 걸리는 작업이라 그새 다른 앱을 보고 있을 수 있다.
+      // 화면 아래 텍스트로만 알리면 놓치기 쉬워서, 확인을 누르기 전까지
+      // 화면 가운데 붙잡아 두는 모달로 항상 결과를 알린다.
+      const okCount = files.length - failCount
+      if (failCount === 0) {
+        setPhotoResult({
+          title: '✅ 분석 완료',
+          body: `사진 ${files.length}장에서 ${newItems.length}건을 찾았어요.\n확인하고 저장해주세요.`,
+        })
+      } else if (okCount === 0) {
+        setPhotoResult({
+          title: '❌ 인식 실패',
+          body: `사진 ${files.length}장 모두에서 지출을 찾지 못했어요.\n직접입력을 이용해주세요.`,
+        })
+      } else {
+        setPhotoResult({
+          title: '⚠️ 일부만 인식',
+          body: `사진 ${files.length}장 중 ${newItems.length}건을 찾았어요.\n${failCount}장은 인식하지 못해 직접입력이 필요해요.`,
+        })
       }
     } finally {
       setParsingImages(false)
@@ -315,6 +338,9 @@ export function RecordTab() {
 
   return (
     <section className="pad">
+      {photoResult && (
+        <ResultModal title={photoResult.title} body={photoResult.body} onClose={() => setPhotoResult(null)} />
+      )}
       {!online && (
         <p className="note" style={{ color: 'var(--marigold)', marginBottom: 9 }}>
           지금 오프라인이에요. 입력은 계속할 수 있고, 온라인이 되면 자동으로 저장돼요.
@@ -359,7 +385,8 @@ export function RecordTab() {
             {parsingImages ? <><span className="spin" />분석 중...</> : online ? '📸 사진 고르기' : '사진 인식은 온라인에서만 가능해요'}
           </button>
           <p className="note" style={{ margin: '9px 0' }}>
-            카드사 앱의 해외결제 상세내역 캡쳐를 올리면 자동으로 읽어요. 최대 5장.
+            카드사·트래블카드 앱의 결제 상세내역이나 결제 목록 캡쳐를 올리면 자동으로 읽어요
+            (목록이면 여러 건도 한 번에). 최대 5장.
             결제 캡쳐는 분석 후 즉시 폐기되고 서버에 저장되지 않아요.
           </p>
         </>

@@ -52,6 +52,10 @@ async function callGeminiOnce(apiKey: string, imageBase64: string): Promise<{ re
         ],
         generationConfig: {
           responseMimeType: 'application/json',
+          // 화면에서 텍스트를 읽어 JSON으로 옮기는 기계적인 작업이라 복잡한
+          // 추론이 필요 없다. Flash 계열은 기본적으로 "생각하기"에 시간을
+          // 더 쓰는데, 이 작업엔 불필요한 지연이라 꺼서 응답을 앞당긴다.
+          thinkingConfig: { thinkingBudget: 0 },
         },
       }),
     },
