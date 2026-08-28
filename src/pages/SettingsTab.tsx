@@ -4,6 +4,7 @@ import { MAX_NAME_LENGTH, useTripMembers } from '../lib/useTripMembers'
 import { useRates } from '../lib/useRates'
 import { useBudgets } from '../lib/useBudgets'
 import { currencyLabel } from '../lib/currencies'
+import { formatAmountInput, stripAmountInput } from '../lib/format'
 import { foreignCurrencies } from '../lib/tripCurrency'
 import { THEMES, applyTheme, getStoredTheme, setStoredTheme, type ThemeCode } from '../lib/themes'
 import { useEntries } from '../lib/useEntries'
@@ -296,8 +297,8 @@ export function SettingsTab() {
               inputMode="decimal"
               aria-label={`${c} 환율 직접 입력`}
               placeholder={rates[defaultRateDate]?.[c] !== undefined ? String(rates[defaultRateDate][c].toFixed(2)) : '원'}
-              value={rateInputs[c] ?? ''}
-              onChange={(e) => setRateInputs((prev) => ({ ...prev, [c]: e.target.value }))}
+              value={formatAmountInput(rateInputs[c] ?? '')}
+              onChange={(e) => setRateInputs((prev) => ({ ...prev, [c]: stripAmountInput(e.target.value) }))}
               onBlur={() => handleManualRate(c)}
             />
           </div>

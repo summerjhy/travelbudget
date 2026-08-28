@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { Budget, Trip } from '../lib/types'
 import { currencyChip, currencyLabel } from '../lib/currencies'
 import { BASE_CURRENCY, tripCurrencies } from '../lib/tripCurrency'
-import { foreign, won } from '../lib/format'
+import { foreign, formatAmountInput, stripAmountInput, won } from '../lib/format'
 import type { RateTable } from '../lib/rates'
 import { latestRateFor } from '../lib/rates'
 
@@ -166,8 +166,8 @@ export function BudgetPanel({
           className="inp num"
           inputMode="decimal"
           placeholder={isForeign ? `환전한 금액 (${form.currency})` : '금액 (원)'}
-          value={form.amount}
-          onChange={(e) => setForm({ ...form, amount: e.target.value })}
+          value={formatAmountInput(form.amount)}
+          onChange={(e) => setForm({ ...form, amount: stripAmountInput(e.target.value) })}
         />
         <input
           className="inp"
@@ -184,8 +184,8 @@ export function BudgetPanel({
             className="inp num"
             inputMode="decimal"
             placeholder={`환전 환율 (1${form.currency}당 원)`}
-            value={form.rate}
-            onChange={(e) => setForm({ ...form, rate: e.target.value })}
+            value={formatAmountInput(form.rate)}
+            onChange={(e) => setForm({ ...form, rate: stripAmountInput(e.target.value) })}
           />
           <input
             className="inp"

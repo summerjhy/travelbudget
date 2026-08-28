@@ -313,11 +313,9 @@ export function HistoryTab() {
             }
 
             const owner = e.member_id ? allMembers.find((m) => m.id === e.member_id) : null
-            // 결제자가 회계 귀속(member_id)과 다를 때만 따로 적는다. 같으면 중복이다.
-            const payer =
-              e.paid_by && e.paid_by !== e.member_id
-                ? allMembers.find((m) => m.id === e.paid_by)
-                : null
+            // 회계 귀속(비용 구분)과 같은 사람이어도 결제자는 항상 보여준다 —
+            // 겹칠 때만 숨기면 "왜 이 건만 결제자가 없지" 하고 헷갈린다.
+            const payer = e.paid_by ? allMembers.find((m) => m.id === e.paid_by) : null
             // 원화 건은 환산이 없으므로 환율을 보여줄 게 없다.
             const shownRate =
               e.rate !== null && entryCurrency(e) !== BASE_CURRENCY
