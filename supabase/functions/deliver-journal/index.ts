@@ -119,8 +119,10 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: '아직 남긴 메모가 없어요.' }, 400)
   }
 
-  const lines = notes.map((n) => `${formatObservedAt(n.observed_at)}. ${n.body}`)
-  const text = `🔍 비밀친구 관찰일지\n\n${lines.join('\n')}`
+  // 줄마다 앞에 불릿을 붙이고 한 줄씩 띄워서, 메모가 많아져도 어디까지가
+  // 한 건인지 눈으로 바로 구분되게 한다(여러 줄이라 헷갈린다는 피드백).
+  const lines = notes.map((n) => `▪️ ${formatObservedAt(n.observed_at)}. ${n.body}`)
+  const text = `🔍 비밀친구 관찰일지\n\n${lines.join('\n\n')}`
 
   const { data: existingDelivery } = await admin
     .from('journal_deliveries')
