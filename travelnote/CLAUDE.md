@@ -48,8 +48,16 @@
 - [x] 8. polish — 토끼(`Bunny`, 포즈: wave/peek/wink/love)+다람쥐(`Squirrel`) SVG 캐릭터와 별/하트/구름 장식(`Decor.tsx`). **팔/꼬리를 넣은 첫 버전은 얼굴 옆에 이상한 덩어리·그림자처럼 보인다는 사용자 피드백으로 전부 제거**하고 얼굴만 남긴 단순한 형태로 다시 그렸다 — 포즈 구분은 눈/입 표정만으로 한다.
 - [x] 9. deploy — GitHub `summerjhy/travelbudget` main에 커밋+푸시(같은 저장소, `travelnote/` 서브디렉토리) 후 Cloudflare Pages 신규 프로젝트(Root directory: `travelnote`) 연동 완료. **배포 URL: https://travelnote-31r.pages.dev/** — 실제 프로덕션에서 코드입력 화면 렌더링과 존재하지 않는 코드 입력 시 "존재하지 않는 코드에요" 에러(=환경변수로 실제 Supabase 연결 확인)까지 Playwright로 검증 완료.
 - [x] 10. (배포 후 리허설에서 발견) 관찰 대상 이름 노출 버그 수정 — 위 5번 항목 참고. `useSecretTarget.ts` + `SecretTargetReveal.tsx`(눌러서 확인, 손 떼면 가림) 추가, 일러스트 팔/꼬리 제거.
+- [x] 11. (10단계 이후 추가) 실기기 리허설 피드백 반영 3건:
+  - **상태바 아이콘이 네모로 보이는 문제**: 웹푸시 알림의 `icon`(트레이의 큰 컬러 아이콘)과 `badge`(상태바의 작은 흑백 실루엣)를 안드로이드가 다르게 렌더링하는데, `sw.ts`가 둘 다 배경까지 꽉 찬 불투명 `pwa-192x192.png`를 썼다. 배경 없이 실루엣만 있는 전용 `badge-96x96.png`(`scripts/badge-source.svg`)를 새로 만들어 `badge` 필드만 교체.
+  - **매칭 완료 알림 추가**: `run-journal-matching`이 매칭 성공 후 활성 멤버 전원의 구독으로 "🎉 비밀친구가 정해졌어요 / 나의 비밀친구가 결정됐어요. 지금 바로 앱에 들어와서 확인해보세요!" 푸시를 보내도록 확장. 실패해도(구독 없음 등) 매칭 자체는 이미 성공했으니 에러로 만들지 않는다.
+  - **발송 알림 문구 변경**: `deliver-journal`의 target 알림 문구를 "💌 관찰일지가 도착했어요 / 누군가 나에게 이번 여행 관찰일지를 보내왔어요. 지금 앱에 들어와서 확인해보세요!"로 교체.
+  - **눌러서 확인 버튼 문구/레이아웃**: "눌러서 확인하기 (손 떼면 다시 가려져요)" 한 줄이 뜻이 안 와닿는다는 피드백으로 "내 비밀친구가 누군지 눌러서 확인하기" / "손 떼면 다시 가려져요" 두 줄, 가운데 정렬로 변경.
+  - **"나를 관찰한 친구의 이름은?" 공개 기능**: 발송(deliver) 이후엔 서로 누군지 밝히는 게 게임의 마지막 재미 포인트이므로, "내가 받은 관찰일지" 박스 아래 버튼을 추가 — 누르면 팝업(색종이 애니메이션 `Confetti.tsx` 포함)으로 `journal_deliveries.observer_member_id`를 `journal_trip_members`/`journal_people`과 조인해 이름+이모지를 공개한다. 이 테이블들은 트립 코드만 알면 조회 가능한 공개 테이블(가계부 참여자 목록과 동일 설계)이라 별도 RLS 변경 없이 바로 구현 가능했다.
 
-**1~10단계 전부 완료.**
+- [x] 12. (재매칭 리셋 누락 버그) 관리자가 이미 매칭된 여행을 다시 뽑을 때(`force`) `journal_secret_pairs`만 지우고 `journal_notes`/`journal_deliveries`는 그대로 남아있던 버그. 그대로 두면 예전 매칭 때 쓴 메모가 새 매칭에서도 남아 엉뚱한 사람에게 전달되거나, 예전 발송 기록 때문에 `deliver-journal`이 "이미 발송함"으로 오판한다. `run-journal-matching`의 force 분기에서 `journal_deliveries`→`journal_notes`→`journal_secret_pairs` 순서로 함께 지우도록 수정하고, `AdminConsole`의 재매칭 확인 문구에도 "메모와 발송 기록까지 전부 지워진다"는 경고를 추가했다.
+
+**1~12단계 전부 완료.**
 
 ## 사용자 외부 작업 체크리스트
 

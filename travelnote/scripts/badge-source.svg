@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 130">
+  <!-- 상태바 배지용. 배경 없이(투명) 실루엣만 채운다 — Chrome/Android가
+       이 알파 채널을 흑백 실루엣으로 렌더링해 상태바에 쓴다. 배경까지
+       꽉 채운 일반 아이콘(pwa-192x192.png)을 그대로 쓰면 알파가 전부
+       불투명이라 안드로이드가 모양을 못 뽑아내고 네모로 보인다. -->
+  <ellipse cx="42" cy="26" rx="13" ry="28" fill="#000" transform="rotate(-16 42 26)" />
+  <ellipse cx="78" cy="26" rx="13" ry="28" fill="#000" transform="rotate(16 78 26)" />
+  <circle cx="60" cy="78" r="42" fill="#000" />
+</svg>

@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react'
 import { useNote } from '../context/NoteContext'
 import { deliverJournal } from '../lib/deliverJournal'
 import { shareText } from '../lib/shareText'
-import { useReceivedDelivery } from '../lib/useReceivedDelivery'
+import { useReceivedDelivery, fetchMemberName } from '../lib/useReceivedDelivery'
 import { Bunny } from '../components/illustrations/Bunny'
 import { Squirrel } from '../components/illustrations/Squirrel'
 import { Heart, Star } from '../components/illustrations/Decor'
+import { Confetti } from '../components/Confetti'
 
 export function DeliverTab() {
   const { trip, member } = useNote()
@@ -16,6 +17,10 @@ export function DeliverTab() {
   const [error, setError] = useState<string | null>(null)
   const [copyNotice, setCopyNotice] = useState<string | null>(null)
   const [checkedExisting, setCheckedExisting] = useState(false)
+
+  const [revealingName, setRevealingName] = useState(false)
+  const [revealedName, setRevealedName] = useState<string | null>(null)
+  const [revealBusy, setRevealBusy] = useState(false)
 
   // journal_deliveries는 RLS가 target_member_id 기준으로만 조회를 허용해서
   // (발송한 사람은 자기가 보낸 걸 다시 못 읽는다 — 그 정책은 "받은 사람만
@@ -50,6 +55,17 @@ export function DeliverTab() {
       setCopyNotice('클립보드에 복사했어요. 카톡에 붙여넣기 해주세요.')
     } else if (!result.ok) {
       setCopyNotice('공유에 실패했어요. 직접 복사해주세요.')
+    }
+  }
+
+  async function handleRevealName() {
+    if (!delivery) return
+    setRevealingName(true)
+    if (!revealedName) {
+      setRevealBusy(true)
+      const name = await fetchMemberName(delivery.observerMemberId)
+      setRevealedName(name)
+      setRevealBusy(false)
     }
   }
 
@@ -112,11 +128,30 @@ export function DeliverTab() {
           <p style={{ marginTop: 8 }}>아직 받은 게 없어요. 비밀친구가 발송하면 여기에 나타나요.</p>
         </div>
       ) : (
-        <div className="box" style={{ padding: '13px 14px' }}>
-          <p className="note" style={{ whiteSpace: 'pre-line', color: 'var(--ink)' }}>{delivery.body}</p>
-        </div>
+        <>
+          <div className="box" style={{ padding: '13px 14px' }}>
+            <p className="note" style={{ whiteSpace: 'pre-line', color: 'var(--ink)' }}>{delivery.body}</p>
+          </div>
+          <button className="btn ghost sm" style={{ marginTop: 8 }} onClick={handleRevealName}>
+            🕵️ 나를 관찰한 친구의 이름은?
+          </button>
+        </>
       )}
       <div style={{ height: 20 }} />
+
+      {revealingName && (
+        <div className="modal-overlay" onClick={() => setRevealingName(false)}>
+          <Confetti />
+          <div className="modal-card" style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+            <p className="title" style={{ justifyContent: 'center' }}>🎉 짜잔!</p>
+            <p className="body" style={{ fontSize: 22, fontWeight: 700, color: 'var(--coral-ink)' }}>
+              {revealBusy ? '확인하는 중...' : revealedName}
+            </p>
+            <p className="note" style={{ margin: '0 0 16px' }}>이 여행 내내 나를 관찰해온 비밀친구예요.</p>
+            <button className="btn" onClick={() => setRevealingName(false)}>닫기</button>
+          </div>
+        </div>
+      )}
     </section>
   )
 }

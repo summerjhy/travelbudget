@@ -130,8 +130,8 @@ Deno.serve(async (req: Request) => {
         .select('*')
         .eq('member_id', pair.target_member_id)
       const payload = JSON.stringify({
-        title: '💌 비밀친구가 관찰일지를 보냈어요',
-        body: `'${trip.name}'에서 당신을 지켜본 이야기가 도착했어요.`,
+        title: '💌 관찰일지가 도착했어요',
+        body: '누군가 나에게 이번 여행 관찰일지를 보내왔어요. 지금 앱에 들어와서 확인해보세요!',
       })
       await Promise.allSettled(
         (subs ?? []).map((s) =>

@@ -1,4 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import webpush from 'npm:web-push@3.6.7'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -112,9 +113,16 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: (e as Error).message }, 500)
   }
 
-  // 재실행(force)이면 기존 매칭을 먼저 지운다 — unique(trip_id, observer_member_id)라서
-  // 지우지 않으면 upsert 충돌이 난다.
+  // 재실행(force)이면 이전 매칭에 딸린 모든 흔적을 지운다.
+  //  - journal_secret_pairs: 지우지 않으면 unique(trip_id, observer_member_id) 충돌.
+  //  - journal_notes: 예전 대상을 관찰하며 쓴 메모라 새 매칭과 안 맞고, 그대로
+  //    두면 다음 발송 때 엉뚱한 사람에게 전달된다.
+  //  - journal_deliveries: 예전 매칭 기준 발송 완료 기록이라, 지우지 않으면
+  //    새로 매칭된 사람이 실제로는 아직 안 보냈는데도 "이미 받은 관찰일지"가
+  //    남아있거나 deliver-journal이 "이미 발송함"으로 오판한다.
   if (body.force) {
+    await supabase.from('journal_deliveries').delete().eq('trip_id', trip.id)
+    await supabase.from('journal_notes').delete().eq('trip_id', trip.id)
     await supabase.from('journal_secret_pairs').delete().eq('trip_id', trip.id)
   }
 
@@ -129,6 +137,41 @@ Deno.serve(async (req: Request) => {
     .update({ matched_at: matchedAt })
     .eq('id', trip.id)
   if (updateError) return jsonResponse({ error: updateError.message }, 500)
+
+  // 매칭이 끝나면 참여자 전원에게 알려준다. 실패해도(구독 없음, VAPID
+  // 미설정 등) 매칭 자체는 이미 성공했으니 에러로 만들지 않는다.
+  const publicKey = Deno.env.get('VAPID_PUBLIC_KEY')
+  const privateKey = Deno.env.get('VAPID_PRIVATE_KEY')
+  const contact = Deno.env.get('VAPID_CONTACT') ?? 'mailto:janghy04@gmail.com'
+  if (publicKey && privateKey) {
+    try {
+      webpush.setVapidDetails(contact, publicKey, privateKey)
+      const { data: subs } = await supabase
+        .from('journal_push_subscriptions')
+        .select('*')
+        .in('member_id', ids)
+      const payload = JSON.stringify({
+        title: '🎉 비밀친구가 정해졌어요',
+        body: '나의 비밀친구가 결정됐어요. 지금 바로 앱에 들어와서 확인해보세요!',
+      })
+      const dead: string[] = []
+      await Promise.allSettled(
+        (subs ?? []).map(async (s) => {
+          try {
+            await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload)
+          } catch (e) {
+            const status = (e as { statusCode?: number }).statusCode
+            if (status === 404 || status === 410) dead.push(s.endpoint)
+          }
+        }),
+      )
+      if (dead.length > 0) {
+        await supabase.from('journal_push_subscriptions').delete().in('endpoint', dead)
+      }
+    } catch (e) {
+      console.error('매칭 알림 발송 실패', (e as Error).message)
+    }
+  }
 
   return jsonResponse({ memberCount: ids.length, matchedAt }, 200)
 })

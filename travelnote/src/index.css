@@ -514,6 +514,54 @@ input, select, textarea {
   margin: 0 0 16px;
 }
 
+/* ------------------------------ 색종이(폭죽) 효과 ------------------------------ */
+/* 팝업이 뜰 때 한 번만 톡톡 터지듯 위로 솟았다 떨어지며 회전한다.
+   modal-card보다 위(모달 오버레이 안, z-index 상속)에서 화면 상단
+   중앙에서 퍼지는 느낌을 준다. */
+.confetti-wrap {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 0;
+  z-index: 101;
+  pointer-events: none;
+}
+.confetti-piece {
+  position: absolute;
+  top: 28vh;
+  width: 9px;
+  height: 14px;
+  border-radius: 2px;
+  opacity: 0;
+  animation-name: confetti-pop;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+}
+@keyframes confetti-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(0) rotate(0deg) scale(.6);
+  }
+  15% {
+    opacity: 1;
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(-46px) rotate(var(--rot)) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(64px) rotate(var(--rot)) scale(.9);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .confetti-piece {
+    animation: none;
+    display: none;
+  }
+}
+
 /* ------------------------------ 이모지 고르기 ------------------------------ */
 .emoji-grid {
   display: grid;
@@ -557,9 +605,12 @@ input, select, textarea {
   touch-action: manipulation;
 }
 .reveal-hidden {
+  display: inline-block;
   font-size: 14px;
   color: var(--soft);
   font-weight: 600;
+  line-height: 1.8;
+  text-align: center;
 }
 .reveal-name {
   font-family: 'Gaegu', sans-serif;

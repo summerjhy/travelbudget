@@ -208,7 +208,7 @@ export function AdminConsole({ onBack, onCreateTrip }: { onBack: () => void; onC
               <div className="box" key={t.id} style={{ marginBottom: 10, padding: 14, borderColor: 'var(--coral)' }}>
                 <p className="note" style={{ marginBottom: 9 }}>
                   {t.matched_at
-                    ? `이미 ${new Date(t.matched_at).toLocaleString('ko-KR')}에 제비뽑기를 했어요. 다시 뽑으면 기존 매칭이 사라져요. 정말 다시 뽑을까요?`
+                    ? `이미 ${new Date(t.matched_at).toLocaleString('ko-KR')}에 제비뽑기를 했어요. 다시 뽑으면 기존 매칭뿐 아니라 그동안 쓴 관찰 메모와 발송 기록까지 전부 지워져요(참여자들이 지금까지 쓴 메모를 모두 잃습니다). 정말 다시 뽑을까요?`
                     : `참여자 ${t.member_count}명으로 비밀친구를 제비뽑기합니다. 한 번 뽑으면 여행 중엔 바꾸지 않는 게 좋아요.`}
                 </p>
                 <div className="row2">

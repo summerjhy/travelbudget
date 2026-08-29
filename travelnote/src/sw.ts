@@ -38,7 +38,11 @@ self.addEventListener('push', (event) => {
     self.registration.showNotification(title, {
       body,
       icon: '/pwa-192x192.png',
-      badge: '/pwa-192x192.png',
+      // badge는 알림 트레이의 큰 아이콘(icon)과 달리 상태바에 뜨는 작은
+      // 흑백 실루엣용이다. icon과 같은(배경이 꽉 찬 불투명) 파일을 쓰면
+      // 안드로이드가 알파 채널에서 모양을 못 뽑아내 네모로 보인다.
+      // 배경 없이 실루엣만 있는 전용 파일(badge-96x96.png)을 따로 쓴다.
+      badge: '/badge-96x96.png',
       tag: 'travelnote-notify',
     }),
   )

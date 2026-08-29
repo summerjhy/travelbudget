@@ -33,7 +33,11 @@ export function SecretTargetReveal({ name }: { name: string }) {
       {revealed ? (
         <span className="reveal-name">{name}</span>
       ) : (
-        <span className="reveal-hidden">👀 눌러서 확인하기 (손 떼면 다시 가려져요)</span>
+        <span className="reveal-hidden">
+          👀 내 비밀친구가 누군지 눌러서 확인하기
+          <br />
+          손 떼면 다시 가려져요
+        </span>
       )}
     </button>
   )
