@@ -46,10 +46,12 @@
 - [x] 2. schema — `journal_*` 마이그레이션(트립/사람/멤버/비밀매칭/메모/발송기록/리마인더/구독) + RLS + 6개 Edge Function(`create-journal-trip`/`run-journal-matching`/`admin-journal`/`journal-push`/`send-journal-reminders`/`deliver-journal`) 실제 프로덕션 배포 및 curl/Playwright 전체 검증 완료
 - [x] 3~7 통합 진행 — 코드/이름 입력, 홈(매칭 상태 안내), 기록(메모 작성+오프라인 큐), 내 메모(편집/삭제), 발송(카톡 공유+받은 메모함), 설정(리마인더+푸시) 전부 실제 Supabase에 연결해 E2E 검증 완료
 - [x] 8. polish — 토끼(`Bunny`, 포즈 4종: wave/peek/wink/love)+다람쥐(`Squirrel`) SVG 캐릭터와 별/하트/구름 장식(`Decor.tsx`)을 새로 그려 홈(매칭 전/후)·발송(발송 전/빈 받은함) 카드에 적용. 첫 시도에서 팔이 뻗는 포즈(wave/love)가 viewBox 밖으로 잘리는 문제가 있어 좌표를 몸통 원(중심 60,78 반지름 42) 바깥에서 시작하도록 재계산하고 viewBox를 넓혀 해결 — Playwright로 실제 렌더링 확인 후 수정.
-- [ ] 9. deploy — Cloudflare Pages 신규 프로젝트 연동
+- [x] 9. deploy — GitHub `summerjhy/travelbudget` main에 커밋+푸시(같은 저장소, `travelnote/` 서브디렉토리) 후 Cloudflare Pages 신규 프로젝트(Root directory: `travelnote`) 연동 완료. **배포 URL: https://travelnote-31r.pages.dev/** — 실제 프로덕션에서 코드입력 화면 렌더링과 존재하지 않는 코드 입력 시 "존재하지 않는 코드에요" 에러(=환경변수로 실제 Supabase 연결 확인)까지 Playwright로 검증 완료.
+
+**1~9단계 전부 완료.**
 
 ## 사용자 외부 작업 체크리스트
 
-- [ ] Cloudflare Pages 새 프로젝트 생성 + Git 연동 (Root directory: `travelnote`)
+- [x] Cloudflare Pages 새 프로젝트 생성 + Git 연동 (Root directory: `travelnote`) — https://travelnote-31r.pages.dev/
 - [ ] 관리자 비밀번호로 실제 여행 만들기 + 참여자 4명 접속 확인
 - [ ] 실기기 iOS/Android 홈 화면 설치 + 알림 켜기 테스트
