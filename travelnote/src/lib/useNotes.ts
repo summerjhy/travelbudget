@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import type { JournalNote } from './types'
 import { enqueueInsert, enqueueUpdate, enqueueDelete, type NewNoteInput } from './offlineQueue'
+import { isNetworkError } from './isNetworkError'
 
 /**
  * 내가 쓴 관찰 메모 목록. RLS가 author_member_id 기준으로 이미 "내 것만"
@@ -39,37 +40,40 @@ export function useNotes(tripId: string | undefined, memberId: string | undefine
     const observedAt = new Date().toISOString()
     const input: NewNoteInput = { trip_id: tripId, author_member_id: memberId, body: trimmed, observed_at: observedAt }
 
-    if (!navigator.onLine) {
-      const localId = await enqueueInsert(tripId, input)
-      const optimistic: JournalNote = {
-        id: localId,
-        trip_id: tripId,
-        author_member_id: memberId,
-        body: trimmed,
-        observed_at: observedAt,
-        created_at: observedAt,
-      }
-      setPending((prev) => [optimistic, ...prev])
-      return { ok: true as const }
+    function queueOptimistic() {
+      return enqueueInsert(tripId!, input).then((localId) => {
+        const optimistic: JournalNote = {
+          id: localId,
+          trip_id: tripId!,
+          author_member_id: memberId!,
+          body: trimmed,
+          observed_at: observedAt,
+          created_at: observedAt,
+        }
+        setPending((prev) => [optimistic, ...prev])
+        return { ok: true as const }
+      })
     }
 
-    const { data, error } = await supabase.from('journal_notes').insert(input).select().single()
-    if (error) {
-      // 온라인이라고 믿었지만 실패했을 수 있다 — 큐에 넣어 나중에 재시도한다.
-      const localId = await enqueueInsert(tripId, input)
-      const optimistic: JournalNote = {
-        id: localId,
-        trip_id: tripId,
-        author_member_id: memberId,
-        body: trimmed,
-        observed_at: observedAt,
-        created_at: observedAt,
-      }
-      setPending((prev) => [optimistic, ...prev])
-      return { ok: true as const }
+    if (!navigator.onLine) {
+      return queueOptimistic()
     }
-    setNotes((prev) => [data, ...prev])
-    return { ok: true as const }
+
+    try {
+      const { data, error } = await supabase.from('journal_notes').insert(input).select().single()
+      if (error) {
+        // 진짜 오프라인/네트워크 문제일 때만 큐에 넣는다. 그 외(RLS 위반 등
+        // 서버가 실제로 거부한 경우)를 오프라인으로 오인해 큐에 넣으면,
+        // 화면엔 저장된 것처럼 보이지만 실제로는 서버에 영영 반영되지
+        // 않고 새로고침하면 조용히 사라진다 — 이 착각이 실제 버그였다.
+        if (isNetworkError(error)) return queueOptimistic()
+        return { ok: false as const, error: '저장에 실패했어요. 다시 시도해주세요.' }
+      }
+      setNotes((prev) => [data, ...prev])
+      return { ok: true as const }
+    } catch {
+      return queueOptimistic()
+    }
   }
 
   async function updateNote(id: string, body: string) {
@@ -83,10 +87,23 @@ export function useNotes(tripId: string | undefined, memberId: string | undefine
       return { ok: true as const }
     }
 
-    const { error } = await supabase.from('journal_notes').update({ body: trimmed }).eq('id', id)
-    if (error) return { ok: false as const, error: '수정에 실패했어요.' }
-    setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, body: trimmed } : n)))
-    return { ok: true as const }
+    try {
+      const { error } = await supabase.from('journal_notes').update({ body: trimmed }).eq('id', id)
+      if (error) {
+        if (isNetworkError(error)) {
+          await enqueueUpdate(tripId, id, { body: trimmed })
+          setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, body: trimmed } : n)))
+          return { ok: true as const }
+        }
+        return { ok: false as const, error: '수정에 실패했어요.' }
+      }
+      setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, body: trimmed } : n)))
+      return { ok: true as const }
+    } catch {
+      await enqueueUpdate(tripId, id, { body: trimmed })
+      setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, body: trimmed } : n)))
+      return { ok: true as const }
+    }
   }
 
   async function deleteNote(id: string) {
@@ -99,10 +116,23 @@ export function useNotes(tripId: string | undefined, memberId: string | undefine
       return { ok: true as const }
     }
 
-    const { error } = await supabase.from('journal_notes').delete().eq('id', id)
-    if (error) return { ok: false as const, error: '삭제에 실패했어요.' }
-    setNotes((prev) => prev.filter((n) => n.id !== id))
-    return { ok: true as const }
+    try {
+      const { error } = await supabase.from('journal_notes').delete().eq('id', id)
+      if (error) {
+        if (isNetworkError(error)) {
+          await enqueueDelete(tripId, id)
+          setNotes((prev) => prev.filter((n) => n.id !== id))
+          return { ok: true as const }
+        }
+        return { ok: false as const, error: '삭제에 실패했어요.' }
+      }
+      setNotes((prev) => prev.filter((n) => n.id !== id))
+      return { ok: true as const }
+    } catch {
+      await enqueueDelete(tripId, id)
+      setNotes((prev) => prev.filter((n) => n.id !== id))
+      return { ok: true as const }
+    }
   }
 
   const merged = [...pending, ...notes].sort((a, b) => (a.observed_at < b.observed_at ? 1 : -1))

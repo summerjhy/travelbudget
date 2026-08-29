@@ -57,7 +57,9 @@
 
 - [x] 12. (재매칭 리셋 누락 버그) 관리자가 이미 매칭된 여행을 다시 뽑을 때(`force`) `journal_secret_pairs`만 지우고 `journal_notes`/`journal_deliveries`는 그대로 남아있던 버그. 그대로 두면 예전 매칭 때 쓴 메모가 새 매칭에서도 남아 엉뚱한 사람에게 전달되거나, 예전 발송 기록 때문에 `deliver-journal`이 "이미 발송함"으로 오판한다. `run-journal-matching`의 force 분기에서 `journal_deliveries`→`journal_notes`→`journal_secret_pairs` 순서로 함께 지우도록 수정하고, `AdminConsole`의 재매칭 확인 문구에도 "메모와 발송 기록까지 전부 지워진다"는 경고를 추가했다.
 
-**1~12단계 전부 완료.**
+- [x] 13. (실사용 중 발견) 메모가 조용히 사라지는 버그 — "발송 탭에서 텍스트 공유 후 기록 탭에서 메모를 추가해도 반영이 안 된다"는 리포트로 발견. 근본 원인은 공유 기능과 무관했다: `useNotes.addNote`와 `useOfflineSync.flushQueue`가 **진짜 오프라인/네트워크 실패**와 **서버가 실제로 거부한 요청(RLS 위반 등)**을 구분하지 않고 전부 "오프라인이니 나중에 재시도"로 취급했다. supabase-js는 RLS 위반도 예외를 던지지 않고 `{data:null, error}`로 정상 반환하므로(travelbudget 8단계에서 이미 겪은 함정과 동일), `flushQueue`의 `try/catch`만으로는 실패를 못 잡아 **실패한 요청도 성공으로 착각해 큐에서 지워버렸다** — 화면엔 저장된 것처럼 보이다가 새로고침하면 서버엔 없어서 조용히 사라지는 현상. `isNetworkError.ts`(travelbudget의 `isNetworkError`와 동일 패턴: `navigator.onLine` + 에러 메시지의 `failed to fetch`/`networkerror`/`load failed` 검사)를 추가해 진짜 네트워크 문제일 때만 큐잉하고, 그 외엔 사용자에게 실제 에러("저장에 실패했어요")를 보여주도록 고쳤다. `x-member-id` 헤더를 인위적으로 깨서 RLS 위반을 재현 → 수정 전엔 조용히 사라짐, 수정 후엔 정확히 에러 표시를 Playwright로 확인. 이 버그는 travelbudget의 `useOfflineSync.ts`에도 동일하게 존재하지만(원본을 그대로 복사해온 것이라) 이번 수정은 travelnote 쪽에만 적용했다 — travelbudget 쪽 수정은 별도 요청 필요.
+
+**1~13단계 전부 완료.**
 
 ## 사용자 외부 작업 체크리스트
 

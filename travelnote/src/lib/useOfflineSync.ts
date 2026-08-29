@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import { getQueuedOps, removeQueuedOp } from './offlineQueue'
+import { isNetworkError } from './isNetworkError'
 
 export function useOnlineStatus() {
   const [online, setOnline] = useState(navigator.onLine)
@@ -19,17 +20,33 @@ export function useOnlineStatus() {
   return online
 }
 
-/** @returns 큐에 있던 모든 작업이 성공적으로 반영됐는지 (하나라도 실패해 중단됐으면 false) */
+/**
+ * @returns 큐에 있던 모든 작업이 성공적으로 반영됐는지 (하나라도 실패해 중단됐으면 false)
+ *
+ * supabase-js는 RLS 위반 같은 진짜 서버 거부도 예외를 던지지 않고
+ * {data:null, error}로 정상 반환한다. 그래서 반드시 {error}를 직접
+ * 확인해야 한다 — try/catch만 믿으면(이전 버전의 버그) 실패한 요청도
+ * "성공"으로 착각해 큐에서 지워버려, 사용자 모르게 데이터가 사라진다.
+ */
 async function flushQueue(tripId: string): Promise<boolean> {
   const ops = await getQueuedOps(tripId)
   for (const queued of ops) {
     try {
+      let error: { message?: string } | null = null
       if (queued.op.type === 'insert') {
-        await supabase.from('journal_notes').insert(queued.op.item)
+        ;({ error } = await supabase.from('journal_notes').insert(queued.op.item))
       } else if (queued.op.type === 'update') {
-        await supabase.from('journal_notes').update(queued.op.patch).eq('id', queued.op.noteId)
+        ;({ error } = await supabase.from('journal_notes').update(queued.op.patch).eq('id', queued.op.noteId))
       } else if (queued.op.type === 'delete') {
-        await supabase.from('journal_notes').delete().eq('id', queued.op.noteId)
+        ;({ error } = await supabase.from('journal_notes').delete().eq('id', queued.op.noteId))
+      }
+
+      if (error) {
+        if (isNetworkError(error)) return false // 아직 오프라인 — 다음 online 이벤트에서 재시도
+        // 서버가 실제로 거부한 요청이다. 큐에서 지우지 않고 남겨둔다 —
+        // 지워버리면 사용자가 알아챌 방법 없이 그 메모가 영영 사라진다.
+        console.error('오프라인 큐 항목 반영 실패(서버 거부):', error.message)
+        return false
       }
       await removeQueuedOp(queued.id)
     } catch {
