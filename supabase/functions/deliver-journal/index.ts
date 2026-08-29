@@ -119,11 +119,11 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: '아직 남긴 메모가 없어요.' }, 400)
   }
 
-  // 줄마다 앞에 불릿을 붙여서 메모가 많아져도 어디까지가 한 건인지 눈으로
-  // 바로 구분되게 한다(여러 줄이라 헷갈린다는 피드백). 줄 사이에 빈 줄까지
-  // 넣었더니 스크롤이 과해진다는 피드백으로 불릿만 남기고 빈 줄은 뺐다.
-  const lines = notes.map((n) => `▪️ ${formatObservedAt(n.observed_at)}. ${n.body}`)
-  const text = `🔍 비밀친구 관찰일지\n\n${lines.join('\n')}`
+  // 시간은 위 줄, 내용은 아래 줄로 나눠서 메모가 많아져도 어디까지가 한
+  // 건인지 눈으로 바로 구분되게 한다(여러 줄이라 헷갈린다는 피드백).
+  // 한 줄에 붙이면 이모지가 많은 메모에서 줄이 삐뚤빼뚤 꺾여 보였다.
+  const lines = notes.map((n) => `▪️ ${formatObservedAt(n.observed_at)}.\n${n.body}`)
+  const text = `🔍 비밀친구 관찰일지\n\n${lines.join('\n\n')}`
 
   const { data: existingDelivery } = await admin
     .from('journal_deliveries')
