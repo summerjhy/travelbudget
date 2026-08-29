@@ -8,7 +8,9 @@ declare let self: ServiceWorkerGlobalScope
 
 precacheAndRoute(self.__WB_MANIFEST)
 
-// Supabase REST/Edge Function 호출은 캐시하지 않는다 — 오프라인 큐(IndexedDB)가 별도로 처리한다.
+// Supabase REST/Edge Function 호출은 캐시하지 않는다 — 관찰 메모는 온라인
+// 상태에서만 쓸 수 있으므로(13단계에서 오프라인 큐를 제거) 캐시된 응답을
+// 보여줄 이유가 없다.
 registerRoute(
   ({ url }) => url.pathname.startsWith('/rest/v1/') || url.pathname.startsWith('/functions/v1/'),
   new NetworkOnly(),
