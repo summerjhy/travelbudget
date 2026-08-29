@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNote } from '../context/NoteContext'
-import { deliverJournal } from '../lib/deliverJournal'
+import { deliverJournal, checkDelivered } from '../lib/deliverJournal'
 import { shareText } from '../lib/shareText'
 import { useReceivedDelivery, fetchMemberName } from '../lib/useReceivedDelivery'
 import { Bunny } from '../components/illustrations/Bunny'
@@ -24,13 +24,14 @@ export function DeliverTab() {
 
   // journal_deliveries는 RLS가 target_member_id 기준으로만 조회를 허용해서
   // (발송한 사람은 자기가 보낸 걸 다시 못 읽는다 — 그 정책은 "받은 사람만
-  // 보임"을 위한 것) 새로고침하면 로컬 state가 날아간다. deliver-journal은
-  // 이미 보낸 경우 재요청해도 부작용 없이(재발송 없이) 그때 텍스트를
-  // alreadyDelivered:true로 돌려주므로, 마운트 시 한 번 불러 복원한다.
+  // 보임"을 위한 것) 새로고침하면 로컬 state가 날아간다. checkDelivered는
+  // checkOnly:true라 아무것도 쓰지 않고 조회만 하므로, 탭을 열기만 해도
+  // 발송이 실행되던 버그(실제 발송 함수를 그대로 불러서 생겼던 문제) 없이
+  // 안전하게 마운트 시 상태를 복원할 수 있다.
   useEffect(() => {
     if (!trip?.matched_at || !trip || !member) return
-    deliverJournal(trip.code, member.id).then((result) => {
-      if (result.ok && result.alreadyDelivered) setSentText(result.text)
+    checkDelivered(trip.code, member.id).then((result) => {
+      if (result.ok && result.alreadyDelivered && result.text) setSentText(result.text)
       setCheckedExisting(true)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -99,7 +100,8 @@ export function DeliverTab() {
             </div>
             <p className="msg">준비됐다면 발송해보세요</p>
             <p className="note" style={{ marginTop: 8 }}>
-              지금까지 쓴 메모 전체가 비밀친구에게 전달돼요. 한 번 발송하면 되돌릴 수 없어요.
+              지금까지 쓴 메모 전체가 비밀친구에게 전달돼요. 이후에도 메모를 더 쓰고 다시
+              발송하면 그때마다 최신 내용으로 갱신돼요.
             </p>
           </div>
           <button className="btn" onClick={handleDeliver} disabled={sending}>
@@ -115,7 +117,11 @@ export function DeliverTab() {
           <button className="btn sky" style={{ marginTop: 10 }} onClick={() => handleShare(sentText)}>
             📋 텍스트로 공유하기 (카톡용)
           </button>
+          <button className="btn quiet sm" style={{ marginTop: 8 }} onClick={handleDeliver} disabled={sending}>
+            {sending ? '갱신 중...' : '↻ 그 사이에 쓴 메모까지 다시 발송하기'}
+          </button>
           {copyNotice && <p className="note" style={{ marginTop: 8 }}>{copyNotice}</p>}
+          {error && <p className="err">{error}</p>}
         </>
       )}
 

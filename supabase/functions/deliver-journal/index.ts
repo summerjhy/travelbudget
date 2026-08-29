@@ -12,21 +12,28 @@ const corsHeaders = {
  * 있다 — memberId가 실제로 그 여행의 journal_secret_pairs에서
  * observer_member_id로 등록돼 있는지 확인한 뒤에만 처리한다.
  *
+ * 처음엔 "한 번 발송하면 그 순간 메모로 영구 고정"이었지만, 발송 후에도
+ * 계속 메모를 쓰는 게 자연스러운 흐름이라("11건 썼는데 발송은 3건만 반영"
+ * 리포트로 발견) **누를 때마다 그 시점까지의 메모 전체로 다시 갱신**하는
+ * 방식으로 바꿨다. 대신 알림은 최초 발송 때만 보낸다 — 매번 알림이 가면
+ * "또 보냈어요?" 스팸이 된다.
+ *
  * 1. 지금까지 쓴 메모 전체(시간순)를 텍스트로 조합해 journal_deliveries에
- *    스냅샷으로 저장한다 — 이후 author가 메모를 고치거나 지워도 이미
- *    보낸 내용은 바뀌지 않는다.
- * 2. target(받는 사람)의 구독 기기로 "비밀친구가 보냈어요" 푸시를 보낸다.
+ *    upsert한다(trip_id+observer_member_id 유니크 — 있으면 갱신, 없으면 생성).
+ * 2. 최초 생성일 때만 target에게 "관찰일지가 도착했어요" 푸시를 보낸다.
  * 3. 조합한 텍스트를 응답으로 돌려줘 클라이언트가 카톡 공유용으로 그대로 쓴다.
  *
  * service_role이 필요한 이유: journal_notes는 본인 것만 보이는 RLS라
  * observer 본인 요청으로는 자기 메모를 읽는 데 문제 없지만, target에게
- * 노출하는 journal_deliveries insert는 target 쪽에서 볼 수 있어야 하므로
- * (RLS가 target_member_id 기준) observer 권한으로는 insert할 수 없다.
+ * 노출하는 journal_deliveries insert/update는 target 쪽에서 볼 수 있어야
+ * 하므로(RLS가 target_member_id 기준) observer 권한으로는 쓸 수 없다.
  */
 
 interface Body {
   tripCode: string
   memberId: string
+  /** true면 실제 발송(upsert) 없이 "이미 발송했는지"만 조회한다. */
+  checkOnly?: boolean
 }
 
 function jsonResponse(body: unknown, status: number) {
@@ -87,16 +94,18 @@ Deno.serve(async (req: Request) => {
     .maybeSingle()
   if (!pair) return jsonResponse({ error: '아직 제비뽑기 전이거나 참여자를 찾을 수 없어요.' }, 404)
 
-  const { data: existingDelivery } = await admin
-    .from('journal_deliveries')
-    .select('id, body, delivered_at')
-    .eq('trip_id', trip.id)
-    .eq('observer_member_id', body.memberId)
-    .maybeSingle()
-  if (existingDelivery) {
-    // 이미 보낸 적 있으면 재발송하지 않고 그때 스냅샷을 그대로 돌려준다 —
-    // 두 번 누르면 알림도 두 번 가는 걸 막는다.
-    return jsonResponse({ text: existingDelivery.body, alreadyDelivered: true }, 200)
+  if (body.checkOnly) {
+    // 조회만 한다 — 아무것도 쓰지 않는다. DeliverTab이 탭을 열 때마다
+    // 이 함수를 호출해 "이미 발송했는지" 복원하는데, checkOnly 없이는
+    // 탭을 열기만 해도 실제 발송(upsert)이 실행되는 버그가 있었다.
+    const { data: existing } = await admin
+      .from('journal_deliveries')
+      .select('body')
+      .eq('trip_id', trip.id)
+      .eq('observer_member_id', body.memberId)
+      .maybeSingle()
+    if (existing) return jsonResponse({ text: existing.body, alreadyDelivered: true }, 200)
+    return jsonResponse({ text: null, alreadyDelivered: false }, 200)
   }
 
   const { data: notes, error: notesError } = await admin
@@ -113,16 +122,29 @@ Deno.serve(async (req: Request) => {
   const lines = notes.map((n) => `${formatObservedAt(n.observed_at)}. ${n.body}`)
   const text = `🔍 비밀친구 관찰일지\n\n${lines.join('\n')}`
 
-  const { error: deliveryError } = await admin.from('journal_deliveries').insert({
-    trip_id: trip.id,
-    observer_member_id: pair.observer_member_id,
-    target_member_id: pair.target_member_id,
-    body: text,
-  })
+  const { data: existingDelivery } = await admin
+    .from('journal_deliveries')
+    .select('id')
+    .eq('trip_id', trip.id)
+    .eq('observer_member_id', body.memberId)
+    .maybeSingle()
+  const isFirstDelivery = !existingDelivery
+
+  const { error: deliveryError } = await admin.from('journal_deliveries').upsert(
+    {
+      trip_id: trip.id,
+      observer_member_id: pair.observer_member_id,
+      target_member_id: pair.target_member_id,
+      body: text,
+      delivered_at: new Date().toISOString(),
+    },
+    { onConflict: 'trip_id,observer_member_id' },
+  )
   if (deliveryError) return jsonResponse({ error: deliveryError.message }, 500)
 
-  // 알림은 부가 기능이다 — 실패해도 발송(스냅샷 저장) 자체는 이미 성공했으므로 에러로 만들지 않는다.
-  if (publicKey && privateKey) {
+  // 알림은 최초 발송 때만 보낸다 — 갱신할 때마다 보내면 스팸이 된다.
+  // 실패해도 발송(스냅샷 저장) 자체는 이미 성공했으므로 에러로 만들지 않는다.
+  if (isFirstDelivery && publicKey && privateKey) {
     try {
       webpush.setVapidDetails(contact, publicKey, privateKey)
       const { data: subs } = await admin
@@ -143,5 +165,5 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  return jsonResponse({ text, alreadyDelivered: false }, 200)
+  return jsonResponse({ text, alreadyDelivered: !isFirstDelivery }, 200)
 })
