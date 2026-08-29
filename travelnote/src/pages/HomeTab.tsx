@@ -1,13 +1,21 @@
 import { useNote } from '../context/NoteContext'
 import { Bunny } from '../components/illustrations/Bunny'
 import { Star, Heart, Cloud } from '../components/illustrations/Decor'
+import { SecretTargetReveal } from '../components/SecretTargetReveal'
+import { useSecretTarget } from '../lib/useSecretTarget'
 
 /**
- * 홈: 매칭 전/후 상태만 안내한다. 관찰 대상 이름은 여기서도 절대 보여주지
- * 않는다 — 관찰일지 컨셉의 핵심이 "누구인지 몰래" 이다.
+ * 홈: 매칭 전/후 상태를 안내한다.
+ *
+ * 매칭 후엔 내 비밀친구가 누구인지 알아야 실제로 관찰을 할 수 있으므로
+ * (마니또 게임 자체가 "나만 알고 다른 사람은 모른다"는 구조 — 대상 본인과
+ * 다른 참여자에게 비밀이어야 하는 거지, 관찰자 본인에게까지 숨기면 아무도
+ * 관찰을 못 함) 이름을 보여주되, 옆 사람이 화면을 볼 수도 있으니 버튼을
+ * 누르고 있는 동안만 나타나게 한다.
  */
 export function HomeTab() {
-  const { trip, personName } = useNote()
+  const { trip, personName, member } = useNote()
+  const { displayName, loading: targetLoading } = useSecretTarget(trip?.id, member?.id)
 
   if (!trip) return null
 
@@ -26,9 +34,16 @@ export function HomeTab() {
             <Bunny size={92} pose="peek" />
           </div>
           <p className="msg">비밀친구를 관찰중이에요</p>
+
+          {!targetLoading && displayName && (
+            <div style={{ margin: '12px 0 4px' }}>
+              <SecretTargetReveal name={displayName} />
+            </div>
+          )}
+
           <p className="note" style={{ marginTop: 8 }}>
             생각날 때마다 <b>기록</b> 탭에서 짧게 메모를 남겨보세요.
-            누구인지는 마지막 날까지 비밀이에요.
+            다른 사람에게는 끝까지 비밀이에요 — 옆에 누가 있을 땐 누르지 마세요.
           </p>
         </div>
       ) : (

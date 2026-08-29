@@ -12,7 +12,7 @@
 2. **진입 방식**: 가계부와 독립된 자체 8자리 코드 체계로 새로 진입. 같은 사람이어도 이름을 다시 입력한다.
 3. **마니또 매칭**: 관리자가 버튼으로 수동 트리거. 더랑주먼트(자기 자신 제외 순환 순열, 무작위 순열 재시도 방식)를 `run-journal-matching` Edge Function이 service_role로 계산 — 클라이언트는 절대 매칭 결과를 만들거나 볼 수 없다.
 4. **비밀 보장의 핵심 (RLS)**: `journal_secret_pairs`는 `observer_member_id = current_member_id()`(요청 헤더 `x-member-id`)일 때만 select 허용. `target_member_id` 기준 역방향 조회 정책은 아예 존재하지 않아 "누가 나를 관찰하는지"는 어떤 방법으로도 조회 불가능 — 실제 curl로 위조 시도까지 검증 완료(다른 사람 행세를 해도 자기 관찰 대상 외엔 절대 안 보임).
-5. **관찰 대상 표시**: 이름 숨김, 익명 표시만("비밀친구를 관찰중이에요 👀").
+5. **관찰 대상 표시 (초기 설계 오류 → 정정)**: 처음엔 "이름 숨김, 익명 표시만"으로 설계했으나, 이는 마니또 게임의 구조를 착각한 것이었다 — 비밀이어야 하는 건 "대상이 관찰당하는지/누가 관찰하는지 모른다"는 방향이지, "관찰자가 자기 대상이 누구인지 모른다"가 아니다(관찰자 본인이 대상을 모르면 애초에 관찰 자체가 불가능하다). 실사용 리허설에서 "내 비밀친구가 누구인지 알 수가 없다"는 피드백으로 발견해 즉시 정정했다. `useSecretTarget.ts`가 `journal_secret_pairs`를 `journal_trip_members`/`journal_people`와 조인해 이름을 가져오고, 홈 화면에 `SecretTargetReveal` 컴포넌트로 보여준다. 단, 옆 사람이 화면을 볼 수 있다는 추가 피드백을 반영해 상시 노출이 아니라 **버튼을 누르고 있는 동안만**(mouse/touchdown~up) 이름이 보이고 손을 떼면 즉시 다시 가려지는 방식(`.reveal-btn`)으로 만들었다 — 탭 토글 방식은 깜빡 잊고 안 끄면 노출 위험이 남는다.
 6. **리마인더**: pg_cron(`journal-reminders`, 매분) + `send-journal-reminders` Edge Function. 앱이 완전히 종료된 상태에서도 정확한 시각에 와야 해서 클라이언트 setTimeout이 아니라 서버가 시각(Asia/Seoul 기준)을 체크해 발송한다. VAPID 키는 가계부 것 재사용, 발송 로직은 새 함수. 실제로 pg_cron이 1분마다 자동 호출해 `last_sent_at`을 갱신하는 것까지 프로덕션에서 확인했다.
 7. **마지막날 발송**: `deliver-journal` Edge Function이 메모 전체를 시간순 텍스트로 조합해 `journal_deliveries`에 스냅샷 저장(이후 원본 메모를 고쳐도 이미 보낸 내용은 안 바뀜) + target에게 "비밀친구가 보냈어요" 푸시. 재요청해도 재발송하지 않고 그때 스냅샷을 그대로 돌려준다(`alreadyDelivered: true`) — 두 번 눌러도 알림이 중복 발송되지 않는다.
 8. **발송 상태의 클라이언트 유지 문제**: `journal_deliveries`는 RLS가 `target_member_id` 기준으로만 select를 허용해서(받는 사람만 보이게 하려는 의도적 설계) 발송한 사람 자신은 이 테이블에서 자기가 보낸 걸 다시 못 읽는다. `DeliverTab`이 새로고침하면 "발송 전" 화면으로 돌아가버리는 버그가 있었는데, `deliver-journal`이 이미 보낸 경우 부작용 없이 그 텍스트를 돌려주는 걸 이용해 마운트 시 한 번 호출해 복원하는 방식으로 해결했다.
@@ -45,10 +45,11 @@
 - [x] 1. scaffold — Vite+React+TS, 디자인 토큰(코랄/파스텔), PWA manifest(share_target 제외), 아이콘 신규 제작, 라우팅 스켈레톤
 - [x] 2. schema — `journal_*` 마이그레이션(트립/사람/멤버/비밀매칭/메모/발송기록/리마인더/구독) + RLS + 6개 Edge Function(`create-journal-trip`/`run-journal-matching`/`admin-journal`/`journal-push`/`send-journal-reminders`/`deliver-journal`) 실제 프로덕션 배포 및 curl/Playwright 전체 검증 완료
 - [x] 3~7 통합 진행 — 코드/이름 입력, 홈(매칭 상태 안내), 기록(메모 작성+오프라인 큐), 내 메모(편집/삭제), 발송(카톡 공유+받은 메모함), 설정(리마인더+푸시) 전부 실제 Supabase에 연결해 E2E 검증 완료
-- [x] 8. polish — 토끼(`Bunny`, 포즈 4종: wave/peek/wink/love)+다람쥐(`Squirrel`) SVG 캐릭터와 별/하트/구름 장식(`Decor.tsx`)을 새로 그려 홈(매칭 전/후)·발송(발송 전/빈 받은함) 카드에 적용. 첫 시도에서 팔이 뻗는 포즈(wave/love)가 viewBox 밖으로 잘리는 문제가 있어 좌표를 몸통 원(중심 60,78 반지름 42) 바깥에서 시작하도록 재계산하고 viewBox를 넓혀 해결 — Playwright로 실제 렌더링 확인 후 수정.
+- [x] 8. polish — 토끼(`Bunny`, 포즈: wave/peek/wink/love)+다람쥐(`Squirrel`) SVG 캐릭터와 별/하트/구름 장식(`Decor.tsx`). **팔/꼬리를 넣은 첫 버전은 얼굴 옆에 이상한 덩어리·그림자처럼 보인다는 사용자 피드백으로 전부 제거**하고 얼굴만 남긴 단순한 형태로 다시 그렸다 — 포즈 구분은 눈/입 표정만으로 한다.
 - [x] 9. deploy — GitHub `summerjhy/travelbudget` main에 커밋+푸시(같은 저장소, `travelnote/` 서브디렉토리) 후 Cloudflare Pages 신규 프로젝트(Root directory: `travelnote`) 연동 완료. **배포 URL: https://travelnote-31r.pages.dev/** — 실제 프로덕션에서 코드입력 화면 렌더링과 존재하지 않는 코드 입력 시 "존재하지 않는 코드에요" 에러(=환경변수로 실제 Supabase 연결 확인)까지 Playwright로 검증 완료.
+- [x] 10. (배포 후 리허설에서 발견) 관찰 대상 이름 노출 버그 수정 — 위 5번 항목 참고. `useSecretTarget.ts` + `SecretTargetReveal.tsx`(눌러서 확인, 손 떼면 가림) 추가, 일러스트 팔/꼬리 제거.
 
-**1~9단계 전부 완료.**
+**1~10단계 전부 완료.**
 
 ## 사용자 외부 작업 체크리스트
 
