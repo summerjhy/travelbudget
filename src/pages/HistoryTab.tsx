@@ -328,21 +328,22 @@ export function HistoryTab() {
                     <span className="name">{e.title}</span>
                     <Pair amount={e.cny} krw={e.krw} currency={entryCurrency(e)} />
                   </div>
-                  <div className="meta">
-                    {e.time && <>{e.time} · </>}{categoryChip(e.category)} ·{' '}
-                    <span style={{ color: e.member_id ? 'var(--marigold)' : 'var(--jade)' }}>
+                  <div className="grid6">
+                    <span className="c1">{e.time || ' '}</span>
+                    <span className="c2">{categoryChip(e.category)}</span>
+                    <span className="c3" style={{ color: e.member_id ? 'var(--marigold)' : 'var(--jade)' }}>
                       {e.member_id
                         ? owner
                           ? owner.personName
                           : '개인'
                         : '공금'}
                     </span>
-                  </div>
-                  <div className="meta">
-                    {paymentChip(e.payment_method)}
-                    {payer && <> · 결제 <MemberName emoji={payer.emoji} name={payer.personName} /></>}
-                    {shownRate && <> · {shownRate}</>}
-                    {e.pending && <span style={{ color: 'var(--marigold)' }}> · 동기화 대기중</span>}
+                    <span className="c1">{paymentChip(e.payment_method)}</span>
+                    <span className="c2">
+                      {payer ? <>결제 <MemberName emoji={payer.emoji} name={payer.personName} /></> : ' '}
+                    </span>
+                    <span className="c3 rate">{shownRate ?? ' '}</span>
+                    {e.pending && <span className="pendingrow">· 동기화 대기중</span>}
                   </div>
                 </div>
                 <button className="x" onClick={(ev) => { ev.stopPropagation(); openEdit(e) }}>수정</button>

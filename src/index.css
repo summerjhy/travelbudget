@@ -495,10 +495,40 @@ input, select, textarea {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.item .meta {
+/* 시간·카테고리·비용구분 / 결제수단·결제자·환율 을 2행 3열로 고정 배치.
+   1·2열은 왼쪽 정렬(내용), 3열은 우측 정렬(비용구분·환율처럼 강조되는 값). */
+.item .grid6 {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr auto;
+  row-gap: 4px;
+  column-gap: 10px;
+  margin-top: 4px;
   font-size: 13.5px;
   color: var(--soft);
-  margin-top: 3px;
+}
+.item .grid6 span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.item .grid6 .c1,
+.item .grid6 .c2 {
+  text-align: left;
+}
+.item .grid6 .c3 {
+  text-align: right;
+}
+.item .grid6 .rate {
+  font-family: 'IBM Plex Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+/* '동기화 대기중' 처럼 드물게 붙는 7번째 값은 3열을 더 늘리지 않고
+   전체 너비로 한 줄 추가한다. */
+.item .grid6 .pendingrow {
+  grid-column: 1 / -1;
+  text-align: left;
+  color: var(--marigold);
 }
 .item .x {
   font-size: 13.5px;
