@@ -10,8 +10,8 @@ import { parseText, parserConfig } from '../lib/parser'
 import { guessCategory } from '../lib/categories'
 import { latestRateFor, rateFor, resolveAmount, type RateTable } from '../lib/rates'
 import { computeTotals, entryCurrency } from '../lib/totals'
-import { foreign, won } from '../lib/format'
-import { currencyChip, currencyLabel, currencyName } from '../lib/currencies'
+import { foreign, won, withJosa } from '../lib/format'
+import { currencyChip, currencyLabel, currencyName, currencyUnit } from '../lib/currencies'
 import { BASE_CURRENCY, defaultCurrency, summaryCurrency, tripCurrencies } from '../lib/tripCurrency'
 import {
   getStoredCostMode,
@@ -554,15 +554,26 @@ export function RecordTab() {
 
       {(showCurrencyPicker || members.length > 0) && (
         <div style={{ marginTop: 9 }}>
-          {showCurrencyPicker && (
-            <p className="tip">
-              <span className="tip-mark" aria-hidden="true">?</span>
-              <span>
-                입력 단위: 단위를 안 적은 숫자는 <b>{currencyName(activeCurrency)}</b>({activeCurrency})로 읽어요.
-                {' '}<b>원</b>{currencies.length > 2 ? ' 처럼 단위를 적으면' : '을 붙이면'} 그 단위로 들어가요.
-              </span>
-            </p>
-          )}
+          {showCurrencyPicker && (() => {
+            // 예시로 보여줄 단위는 지금 활성 통화가 아닌 다른 통화여야 한다.
+            // "원"으로 고정해두면 원을 입력 단위로 고른 경우 "원이 기본인데
+            // 원을 붙이면 그 단위로 들어간다"는 모순된 문장이 됐다.
+            const otherCode = currencies.find((c) => c !== activeCurrency) ?? activeCurrency
+            const otherUnit = currencyUnit(otherCode)
+            return (
+              <p className="tip">
+                <span className="tip-mark" aria-hidden="true">?</span>
+                <span>
+                  입력 단위: 단위를 안 적은 숫자는 <b>{currencyName(activeCurrency)}</b>({activeCurrency})로 읽어요.
+                  {' '}{currencies.length > 2 ? (
+                    <><b>{otherUnit}</b> 처럼 단위를 적으면</>
+                  ) : (
+                    <><b>{withJosa(otherUnit, '을', '를')}</b> 붙이면</>
+                  )} 그 단위로 들어가요.
+                </span>
+              </p>
+            )
+          })()}
           {members.length > 0 && (
             <p className="tip">
               <span className="tip-mark" aria-hidden="true">?</span>

@@ -182,3 +182,9 @@ export function currencyName(code: string): string {
   const c = BY_CODE.get(code)
   return c ? `${c.country} ${c.unit}` : code
 }
+
+/** `CNY` → `위안`, `KRW` → `원`. 나라 이름 없이 통화 단위만 필요할 때. */
+export function currencyUnit(code: string): string {
+  const c = BY_CODE.get(code)
+  return c ? c.unit : code
+}

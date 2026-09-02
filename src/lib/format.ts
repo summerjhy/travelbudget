@@ -36,3 +36,13 @@ export function formatAmountInput(raw: string): string {
 export function stripAmountInput(formatted: string): string {
   return formatted.replace(/,/g, '')
 }
+
+/**
+ * 받침 유무에 따라 조사를 골라 단어에 붙인다. "위안"+을/를 → "위안을",
+ * "달러"+을/를 → "달러를". 한글이 아닌 문자로 끝나면(코드 등) 그냥 첫 조사를 쓴다.
+ */
+export function withJosa(word: string, withBatchim: string, withoutBatchim: string): string {
+  const code = word.charCodeAt(word.length - 1) - 0xac00
+  const hasBatchim = code >= 0 && code <= 11171 && code % 28 !== 0
+  return `${word}${code >= 0 && code <= 11171 ? (hasBatchim ? withBatchim : withoutBatchim) : withBatchim}`
+}
