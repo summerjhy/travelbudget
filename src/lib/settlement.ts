@@ -54,8 +54,19 @@ export interface PayerSummary {
   /** paidTotal 중 본인 개인경비를 본인이 낸 부분을 뺀 나머지(공금 결제 + 남의 개인경비 대신 결제). */
   otherBurdenPaid: number
   otherBurdenPaidN: number
-  /** 여행 중에 공금에서 미리 받은 순액(나눠받음 - 돌려줌). 없으면 0. */
-  received: number
+  /** 이 사람이 결제한 공금 지출 합계. */
+  fundPaid: number
+  fundPaidN: number
+  /**
+   * 결제에 쓸 수 있게 손에 쥐고 있던 공금.
+   * 이체로 미리 받은 순액 + (총무면 나눠주고 남아 본인이 들고 있던 예산).
+   */
+  fundHeld: number
+  /**
+   * 공금 결제 중 실제로 자기 돈이 나간 몫 (fundPaid - fundHeld).
+   * 음수면 공금을 덜 써서 남긴 것이다.
+   */
+  ownPocket: number
 }
 
 export interface SettlementTransfer {
@@ -186,11 +197,18 @@ export function computeSettlement(
     warnings.push(`이미 빠진 참여자 몫으로 남아있는 개인경비 ${Math.round(unassignedPersonal).toLocaleString('ko-KR')}원은 정산에서 제외했어요.`)
   }
 
+  // 공금에서 미리 받은 순액. 이미 빠진 참여자에게 나간 것은 정산 대상이 아니라 뺀다.
+  const received = receivedByMember(handouts)
+  let handedOut = 0
+  for (const [id, v] of received) if (memberIds.has(id)) handedOut += v
+
   // ---- 4. 결제자별 총액 ----
   const paidTotal = new Map<string, number>()
   const paidTotalN = new Map<string, number>()
   const selfSharePaid = new Map<string, number>()
   const selfSharePaidN = new Map<string, number>()
+  const fundPaid = new Map<string, number>()
+  const fundPaidN = new Map<string, number>()
   let unassignedPaid = 0
   let unassignedPaidN = 0
 
@@ -211,6 +229,10 @@ export function computeSettlement(
       selfSharePaid.set(e.paid_by, (selfSharePaid.get(e.paid_by) ?? 0) + Number(e.krw))
       selfSharePaidN.set(e.paid_by, (selfSharePaidN.get(e.paid_by) ?? 0) + 1)
     }
+    if (e.member_id === null) {
+      fundPaid.set(e.paid_by, (fundPaid.get(e.paid_by) ?? 0) + Number(e.krw))
+      fundPaidN.set(e.paid_by, (fundPaidN.get(e.paid_by) ?? 0) + 1)
+    }
   }
 
   const payerSummaries: PayerSummary[] = members.map((m) => {
@@ -218,6 +240,11 @@ export function computeSettlement(
     const totalN = paidTotalN.get(m.id) ?? 0
     const self = selfSharePaid.get(m.id) ?? 0
     const selfN = selfSharePaidN.get(m.id) ?? 0
+    const fp = fundPaid.get(m.id) ?? 0
+    // 총무는 따로 이체받지 않아도 나눠주고 남은 예산을 본인이 들고 있다.
+    // 그 몫까지 세지 않으면 총무가 자기 돈을 훨씬 많이 낸 것처럼 보인다.
+    const held =
+      (received.get(m.id) ?? 0) + (treasurerId && m.id === treasurerId ? budget - handedOut : 0)
     return {
       memberId: m.id,
       name: m.displayName,
@@ -225,7 +252,10 @@ export function computeSettlement(
       paidTotalN: totalN,
       otherBurdenPaid: total - self,
       otherBurdenPaidN: totalN - selfN,
-      received: receivedByMember(handouts).get(m.id) ?? 0,
+      fundPaid: fp,
+      fundPaidN: fundPaidN.get(m.id) ?? 0,
+      fundHeld: held,
+      ownPocket: fp - held,
     }
   })
 
@@ -236,11 +266,6 @@ export function computeSettlement(
   }
 
   // ---- net 계산 ----
-  // 공금에서 미리 받은 순액. 이미 빠진 참여자에게 나간 것은 정산 대상이 아니라 뺀다.
-  const received = receivedByMember(handouts)
-  let handedOut = 0
-  for (const [id, v] of received) if (memberIds.has(id)) handedOut += v
-
   const rawNet = members.map((m) => {
     const fair = (personal.get(m.id) ?? 0) + fund / n
     const paidRaw = paidTotal.get(m.id) ?? 0

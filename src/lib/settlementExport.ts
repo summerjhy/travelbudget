@@ -42,9 +42,9 @@ export function settlementToCsv(result: SettlementResult, ctx: Ctx): string {
   lines.push('')
 
   lines.push('[결제자별 총액]')
-  lines.push(['결제자', '결제 총액', '건수', '예산초과분&개인경비 결제금액', '건수', '여행중 공금 수령'].map(cell).join(','))
+  lines.push(['결제자', '결제 총액', '건수', '공금 결제액', '건수', '손에 쥔 공금', '자기 돈으로 낸 몫'].map(cell).join(','))
   for (const p of result.payerSummaries) {
-    lines.push([p.name, p.paidTotal, p.paidTotalN, p.otherBurdenPaid, p.otherBurdenPaidN, p.received].map(cell).join(','))
+    lines.push([p.name, p.paidTotal, p.paidTotalN, p.fundPaid, p.fundPaidN, p.fundHeld, p.ownPocket].map(cell).join(','))
   }
   lines.push('')
 
@@ -97,12 +97,18 @@ export function settlementToText(result: SettlementResult, ctx: Ctx): string {
   out.push('4. 결제자별 총액')
   for (const p of result.payerSummaries) {
     out.push(`· ${p.name} : ${won(p.paidTotal)} (${p.paidTotalN}건)`)
-    if (p.otherBurdenPaidN > 0) {
-      out.push(`  └ 예산 초과분 & 개인경비 금액 결제금액 : ${won(p.otherBurdenPaid)} (${p.otherBurdenPaidN}건)`)
+    if (p.fundPaidN > 0) {
+      out.push(`  └ 그중 공금 결제 : ${won(p.fundPaid)} (${p.fundPaidN}건)`)
     }
-    // 미리 받아간 공금이 있으면 왜 정산액이 그렇게 나왔는지 여기서 설명된다.
-    if (p.received !== 0) {
-      out.push(`  └ 여행 중 공금에서 미리 받음 : ${won(p.received)}`)
+    // 공금을 쥐고 결제한 사람은 그 돈이 자기 돈이 아니다. 이걸 안 보여주면
+    // 결제액 전부를 자기가 부담한 것처럼 읽혀 정산 결과가 이상해 보인다.
+    if (p.fundHeld !== 0) {
+      out.push(`  └ 손에 쥔 공금 : ${won(p.fundHeld)}`)
+      out.push(
+        p.ownPocket >= 0
+          ? `  └ 자기 돈으로 낸 몫 : ${won(p.ownPocket)}`
+          : `  └ 쓰고 남은 공금 : ${won(-p.ownPocket)}`,
+      )
     }
   }
   out.push('')
