@@ -36,14 +36,24 @@ export interface Budget {
   id: string
   trip_id: string
   date: string
-  /** 원화 환산액. 합계·잔여는 항상 이 값으로 낸다. */
+  /**
+   * 원화 환산액. prepaid 면 original_amount * rate 로 고정된 값이고,
+   * 아니면 입력 당시 시세로 계산한 참고용 스냅샷이라 화면에서는 그날 시세로 다시 환산한다.
+   */
   amount: number
   /** 입력할 때 쓴 통화. 예전 행과 원화 입력은 KRW. */
   currency: string
   /** 입력한 그대로의 외화 금액. 원화로 넣었으면 null. */
   original_amount: number | null
-  /** 환전 시점 환율(1 currency 당 원화). 시세가 변해도 이 값으로 고정된다. */
+  /** 환전 시점 환율(1 currency 당 원화). prepaid 가 아니면 null 이고 그날 시세를 쓴다. */
   rate: number | null
+  /**
+   * 외화 예산일 때만 의미가 있다.
+   * true  = 미리 환전해둔 돈. 지갑의 외화도, 치른 원화도 시세와 무관하게 고정.
+   * false = 실시간 환율로 결제되는 한도. 외화 금액만 고정이고 원화는 시세를 따라간다.
+   * 예전 행은 null 로 올 수 있고 그때는 true(환전해둔 것)로 읽는다.
+   */
+  prepaid: boolean | null
   memo: string | null
   created_at: string
 }

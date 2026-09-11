@@ -5,7 +5,7 @@ import { useRates } from '../lib/useRates'
 import { useEntries, type PendingEntry } from '../lib/useEntries'
 import { useBudgets } from '../lib/useBudgets'
 import { usePolling } from '../lib/usePolling'
-import { latestRateFor, rateFor, resolveAmount } from '../lib/rates'
+import { rateFor, resolveAmount } from '../lib/rates'
 import { computeTotals, entryCurrency } from '../lib/totals'
 import { CATEGORIES, categoryChip } from '../lib/categories'
 import { BASE_CURRENCY, summaryCurrency, tripCurrencies } from '../lib/tripCurrency'
@@ -39,7 +39,7 @@ export function HistoryTab() {
   const { members, allMembers } = useTripMembers(trip?.id)
   const { rates, fetchNow } = useRates(trip?.id, trip?.code)
   const { entries, updateEntry, removeEntry, refresh } = useEntries(trip?.id)
-  const { total: budgetTotal } = useBudgets(trip?.id)
+  const { budgets } = useBudgets(trip?.id)
   usePolling(refresh, !!trip?.id)
 
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
@@ -73,7 +73,7 @@ export function HistoryTab() {
 
   const currencies = tripCurrencies(trip)
   const summary = summaryCurrency(trip)
-  const totals = computeTotals(entries, allMembers, budgetTotal, summary, latestRateFor(rates, summary))
+  const totals = computeTotals(entries, allMembers, budgets, rates, summary)
   const categories = useMemo(() => CATEGORIES.map(([name]) => name).concat('기타'), [])
 
   const filtered = entries.filter((e) => {

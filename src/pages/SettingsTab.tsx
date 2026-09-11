@@ -11,6 +11,7 @@ import { THEMES, applyTheme, getStoredTheme, setStoredTheme, type ThemeCode } fr
 import { useEntries } from '../lib/useEntries'
 import { ExportPanel } from '../components/ExportPanel'
 import { SettlementPanel } from '../components/SettlementPanel'
+import { budgetTotalKrw } from '../lib/totals'
 import { BudgetPanel } from '../components/BudgetPanel'
 import { ShareTripButton } from '../components/ShareTripButton'
 import { PushPanel } from '../components/PushPanel'
@@ -24,8 +25,11 @@ export function SettingsTab() {
   const { trip, member, switchTrip, renameMe, setTreasurer } = useTrip()
   const { members, allMembers, refresh: refreshMembers, addMember, setMemberEmoji, deactivateMember } = useTripMembers(trip?.id)
   const { rates, setManualRate, fetchNow } = useRates(trip?.id, trip?.code)
-  const { budgets, total, addBudget, updateBudget, removeBudget } = useBudgets(trip?.id)
+  const { budgets, addBudget, updateBudget, removeBudget } = useBudgets(trip?.id)
   const { entries } = useEntries(trip?.id)
+
+  // 예산 총액(원화). 실시간 환율 예산이 섞여 있으면 그날 시세로 다시 환산한다.
+  const total = budgetTotalKrw(budgets, rates)
 
   // 통화별 직접입력 칸. 통화 코드 → 입력 중인 값.
   const [rateInputs, setRateInputs] = useState<Record<string, string>>({})

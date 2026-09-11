@@ -51,12 +51,12 @@ export function HomeTab() {
   const { members, allMembers } = useTripMembers(trip?.id)
   const { rates } = useRates(trip?.id, trip?.code)
   const { entries, refresh } = useEntries(trip?.id)
-  const { total: budgetTotal } = useBudgets(trip?.id)
+  const { budgets } = useBudgets(trip?.id)
   const { names: tripNames } = useTripNames()
   usePolling(refresh, !!trip?.id)
 
   const summary = summaryCurrency(trip)
-  const totals = computeTotals(entries, allMembers, budgetTotal, summary, latestRateFor(rates, summary))
+  const totals = computeTotals(entries, allMembers, budgets, rates, summary)
 
   const today = todayForTrip(trip)
   const todaySpend = useMemo(

@@ -4,12 +4,16 @@ import { currencyChip, currencyLabel } from '../lib/currencies'
 import { BASE_CURRENCY, tripCurrencies } from '../lib/tripCurrency'
 import { foreign, formatAmountInput, stripAmountInput, won } from '../lib/format'
 import type { RateTable } from '../lib/rates'
+import type { BudgetInput } from '../lib/useBudgets'
+import { isPrepaid } from '../lib/totals'
 import { latestRateFor } from '../lib/rates'
 
 interface Form {
   amount: string
   currency: string
   rate: string
+  /** 미리 환전해둔 돈인지. false 면 실시간 환율로 결제되는 한도다. */
+  prepaid: boolean
   date: string
   memo: string
 }
@@ -19,24 +23,23 @@ interface Props {
   budgets: Budget[]
   total: number
   rates: RateTable
-  addBudget: (i: { amount: number; currency: string; rate?: number | null; date: string; memo: string }) => Promise<{ ok: boolean; error?: string }>
-  updateBudget: (id: string, i: { amount: number; currency: string; rate?: number | null; date: string; memo: string }) => Promise<{ ok: boolean; error?: string }>
+  addBudget: (i: BudgetInput) => Promise<{ ok: boolean; error?: string }>
+  updateBudget: (id: string, i: BudgetInput) => Promise<{ ok: boolean; error?: string }>
   removeBudget: (id: string) => Promise<{ ok: boolean; error?: string }>
   today: string
 }
 
 function emptyForm(currency: string, date: string): Form {
-  return { amount: '', currency, rate: '', date, memo: '' }
+  return { amount: '', currency, rate: '', prepaid: true, date, memo: '' }
 }
 
 /**
  * 공금 예산.
  *
- * 통화를 골라 넣을 수 있다 — 트래블카드에 미리 환전해두는 경우가 많아서,
- * "3만 TWD를 43.42에 환전" 처럼 그대로 적는 게 자연스럽다.
- * 넣는 순간 원화로 환산해 고정하므로 나중에 시세가 움직여도 예산은 그대로다.
- *
- * 통화를 섞어 넣어도 예산은 하나의 원화 모집합이다. 지갑을 나누지 않는다.
+ * 통화를 골라 넣을 수 있고, 외화로 넣을 때는 성격이 둘로 갈린다.
+ *   · 미리 환전함   — "3만 TWD를 43.42에 환전". 환전이 끝났으니 시세가 변해도 그대로.
+ *   · 실시간 환율   — 계좌 연동/신용카드처럼 결제할 때마다 그날 환율로 환산되는 한도.
+ * 두 경우 다 외화 금액이 진짜고, 원화를 어떤 환율로 보여줄지만 다르다.
  */
 export function BudgetPanel({
   trip, budgets, total, rates, addBudget, updateBudget, removeBudget, today,
@@ -49,7 +52,8 @@ export function BudgetPanel({
 
   const isForeign = form.currency !== BASE_CURRENCY
   const amountNum = parseFloat(form.amount.replace(/,/g, '')) || 0
-  const rateNum = parseFloat(form.rate) || 0
+  const marketRate = isForeign ? latestRateFor(rates, form.currency) : 1
+  const rateNum = form.prepaid ? parseFloat(form.rate) || 0 : marketRate
   const previewKrw = isForeign ? Math.round(amountNum * rateNum) : Math.round(amountNum)
 
   function pickCurrency(c: string) {
@@ -67,6 +71,7 @@ export function BudgetPanel({
       amount: String(b.original_amount ?? b.amount),
       currency: b.currency ?? BASE_CURRENCY,
       rate: b.rate === null || b.rate === undefined ? '' : String(b.rate),
+      prepaid: isPrepaid(b),
       date: b.date,
       memo: b.memo ?? '',
     })
@@ -88,7 +93,9 @@ export function BudgetPanel({
     const payload = {
       amount: amountNum,
       currency: form.currency,
-      rate: isForeign ? rateNum : null,
+      rate: isForeign && form.prepaid ? rateNum : null,
+      prepaid: form.prepaid,
+      marketRate,
       date: form.date,
       memo: form.memo.trim() || (editingId ? '예산' : '추가 예산'),
     }
@@ -125,7 +132,8 @@ export function BudgetPanel({
                 <span style={{ opacity: 0.6, fontSize: 13.5 }}> · {b.date}</span>
                 {cur !== BASE_CURRENCY && b.original_amount !== null && (
                   <span style={{ opacity: 0.75, fontSize: 13.5, display: 'block' }}>
-                    {foreign(b.original_amount, cur)} × {b.rate}
+                    {foreign(b.original_amount, cur)}
+                    {isPrepaid(b) ? ` × ${b.rate} (환전 완료)` : ' · 실시간 환율'}
                   </span>
                 )}
               </span>
@@ -179,6 +187,31 @@ export function BudgetPanel({
       </div>
 
       {isForeign && (
+        <div className="field">
+          <label className="lab">💸 이 돈의 성격</label>
+          <div className="chips">
+            <button
+              className={'chip' + (form.prepaid ? ' on' : '')}
+              onClick={() => setForm({ ...form, prepaid: true })}
+            >
+              미리 환전함
+            </button>
+            <button
+              className={'chip' + (!form.prepaid ? ' on' : '')}
+              onClick={() => setForm({ ...form, prepaid: false, rate: '' })}
+            >
+              실시간 환율
+            </button>
+          </div>
+          <p className="note" style={{ marginTop: 6 }}>
+            {form.prepaid
+              ? '현금·트래블카드처럼 이미 환전을 끝낸 돈이에요. 시세가 변해도 예산은 그대로예요.'
+              : '계좌 연동 카드나 신용카드처럼 결제할 때마다 그날 환율로 계산돼요.'}
+          </p>
+        </div>
+      )}
+
+      {isForeign && form.prepaid && (
         <div className="row2" style={{ marginBottom: 7 }}>
           <input
             className="inp num"
@@ -197,10 +230,23 @@ export function BudgetPanel({
         </div>
       )}
 
+      {isForeign && !form.prepaid && (
+        <div className="row2" style={{ marginBottom: 7 }}>
+          <input
+            className="inp"
+            type="date"
+            value={form.date}
+            onChange={(e) => setForm({ ...form, date: e.target.value })}
+          />
+        </div>
+      )}
+
       {isForeign && amountNum > 0 && rateNum > 0 && (
         <p className="note" style={{ marginBottom: 7 }}>
-          {foreign(amountNum, form.currency)} × {rateNum} = <b>{won(previewKrw)}</b> 로 잡혀요.
-          환전할 때 환율이라 나중에 시세가 변해도 그대로예요.
+          {foreign(amountNum, form.currency)} × {rateNum} = <b>{won(previewKrw)}</b>
+          {form.prepaid
+            ? ' 로 잡혀요. 환전할 때 환율이라 나중에 시세가 변해도 그대로예요.'
+            : ' 쯤 돼요. 오늘 시세 기준이라 앞으로 시세를 따라 달라져요.'}
         </p>
       )}
 
@@ -219,8 +265,8 @@ export function BudgetPanel({
 
       <p className="note" style={{ marginTop: 9 }}>
         여행 중에 공금을 더 걷으면 여기에 추가하세요.
-        {currencies.length > 1 && ' 트래블카드에 여행 국가의 화폐를 미리 환전해뒀다면 그 금액과 환율을 그대로 적으면 돼요.'}
-        {' '}통화를 섞어 넣어도 예산은 원화 하나로 합쳐서 계산해요.
+        {currencies.length > 1 && ' 외화로 넣을 때는 이미 환전한 돈인지, 결제할 때마다 환산되는 한도인지 골라주세요.'}
+        {' '}통화별로 따로 세서 지갑에 남은 금액과 어긋나지 않아요.
       </p>
     </>
   )

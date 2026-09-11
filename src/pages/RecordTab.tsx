@@ -47,7 +47,7 @@ export function RecordTab() {
   const { members, allMembers } = useTripMembers(trip?.id)
   const { rates, fetchNow } = useRates(trip?.id, trip?.code)
   const { entries, addEntries, refresh } = useEntries(trip?.id)
-  const { total: budgetTotal } = useBudgets(trip?.id)
+  const { budgets } = useBudgets(trip?.id)
   const { online } = useOfflineSync(trip?.id, refresh)
   usePolling(refresh, !!trip?.id)
 
@@ -71,7 +71,7 @@ export function RecordTab() {
   // 통화 선택 버튼은 고를 게 둘 이상일 때만 띄운다.
   const showCurrencyPicker = currencies.length >= 2
   const summary = summaryCurrency(trip)
-  const totals = computeTotals(entries, allMembers, budgetTotal, summary, latestRateFor(rates, summary))
+  const totals = computeTotals(entries, allMembers, budgets, rates, summary)
 
   // 입력 단위: 한 번 고르면 바꾸기 전까지 유지된다. 처음에는 여행하는 나라 돈.
   const activeCurrency =
