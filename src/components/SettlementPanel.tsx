@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Trip } from '../lib/types'
-import type { Entry } from '../lib/types'
+import type { Entry, FundHandout } from '../lib/types'
 import type { MemberWithName } from '../lib/useTripMembers'
 import { computeSettlement, type SettlementResult } from '../lib/settlement'
 import { SettlementExportModal } from './SettlementExportModal'
@@ -10,6 +10,8 @@ interface Props {
   members: MemberWithName[]
   entries: Entry[]
   budget: number
+  /** 여행 중에 공금을 미리 주고받은 기록. 없으면 예전과 같은 계산이다. */
+  handouts: FundHandout[]
 }
 
 /**
@@ -20,7 +22,7 @@ interface Props {
  * 도는 순수 함수(computeSettlement)라 네트워크 요청이 필요 없지만,
  * 버튼 클릭에 반응이 보이도록 짧게 처리 중 상태를 보여준다.
  */
-export function SettlementPanel({ trip, members, entries, budget }: Props) {
+export function SettlementPanel({ trip, members, entries, budget, handouts }: Props) {
   const [result, setResult] = useState<SettlementResult | null>(null)
   const [busy, setBusy] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
@@ -28,7 +30,7 @@ export function SettlementPanel({ trip, members, entries, budget }: Props) {
   function handleRun() {
     setBusy(true)
     setTimeout(() => {
-      const r = computeSettlement(entries, members, budget, trip.treasurer_member_id)
+      const r = computeSettlement(entries, members, budget, trip.treasurer_member_id, handouts)
       setResult(r)
       setBusy(false)
     }, 0)

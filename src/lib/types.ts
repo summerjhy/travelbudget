@@ -83,3 +83,25 @@ export interface Entry {
   created_at: string
   updated_at: string
 }
+
+/**
+ * 공금을 멤버에게 미리 건네거나(out) 되돌려받은(in) 기록.
+ * 지출이 아니라 공금이 누구 손에 있는지가 바뀌는 것이라 잔여 예산에는 영향이 없고,
+ * 최종 정산에서만 반영된다.
+ */
+export interface FundHandout {
+  id: string
+  trip_id: string
+  /** 상대방 trip_members.id. out 이면 받은 사람, in 이면 돌려준 사람. */
+  member_id: string
+  direction: 'out' | 'in'
+  /** 원화 환산액. 정산은 항상 이 값으로 한다. */
+  amount: number
+  currency: string
+  original_amount: number | null
+  /** 외화로 건넨 경우 적용 환율. 미리 환전한 주머니에서 나갔으면 그 주머니의 환전 환율. */
+  rate: number | null
+  date: string
+  memo: string | null
+  created_at: string
+}

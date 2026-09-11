@@ -11,6 +11,8 @@ import { THEMES, applyTheme, getStoredTheme, setStoredTheme, type ThemeCode } fr
 import { useEntries } from '../lib/useEntries'
 import { ExportPanel } from '../components/ExportPanel'
 import { SettlementPanel } from '../components/SettlementPanel'
+import { HandoutPanel } from '../components/HandoutPanel'
+import { useFundHandouts } from '../lib/useFundHandouts'
 import { budgetTotalKrw } from '../lib/totals'
 import { BudgetPanel } from '../components/BudgetPanel'
 import { ShareTripButton } from '../components/ShareTripButton'
@@ -27,6 +29,7 @@ export function SettingsTab() {
   const { rates, setManualRate, fetchNow } = useRates(trip?.id, trip?.code)
   const { budgets, addBudget, updateBudget, removeBudget } = useBudgets(trip?.id)
   const { entries } = useEntries(trip?.id)
+  const { handouts, addHandout, removeHandout } = useFundHandouts(trip?.id)
 
   // 예산 총액(원화). 실시간 환율 예산이 섞여 있으면 그날 시세로 다시 환산한다.
   const total = budgetTotalKrw(budgets, rates)
@@ -282,6 +285,19 @@ export function SettingsTab() {
         />
       )}
 
+      <div className="sec">💸 공금 나눠주기</div>
+      {trip && (
+        <HandoutPanel
+          trip={trip}
+          members={members}
+          handouts={handouts}
+          rates={rates}
+          addHandout={addHandout}
+          removeHandout={removeHandout}
+          today={defaultRateDate}
+        />
+      )}
+
       {currencies.length > 0 && (
         <>
         <div className="sec">💱 환율 · 원화 기준</div>
@@ -351,7 +367,7 @@ export function SettingsTab() {
       <div className="sec">🧮 최종 정산하기</div>
       {trip && (
         <div className="box" style={{ padding: 14, marginBottom: 10 }}>
-          <SettlementPanel trip={trip} members={members} entries={entries} budget={total} />
+          <SettlementPanel trip={trip} members={members} entries={entries} budget={total} handouts={handouts} />
         </div>
       )}
 

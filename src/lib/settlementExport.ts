@@ -42,9 +42,9 @@ export function settlementToCsv(result: SettlementResult, ctx: Ctx): string {
   lines.push('')
 
   lines.push('[결제자별 총액]')
-  lines.push(['결제자', '결제 총액', '건수', '예산초과분&개인경비 결제금액', '건수'].map(cell).join(','))
+  lines.push(['결제자', '결제 총액', '건수', '예산초과분&개인경비 결제금액', '건수', '여행중 공금 수령'].map(cell).join(','))
   for (const p of result.payerSummaries) {
-    lines.push([p.name, p.paidTotal, p.paidTotalN, p.otherBurdenPaid, p.otherBurdenPaidN].map(cell).join(','))
+    lines.push([p.name, p.paidTotal, p.paidTotalN, p.otherBurdenPaid, p.otherBurdenPaidN, p.received].map(cell).join(','))
   }
   lines.push('')
 
@@ -99,6 +99,10 @@ export function settlementToText(result: SettlementResult, ctx: Ctx): string {
     out.push(`· ${p.name} : ${won(p.paidTotal)} (${p.paidTotalN}건)`)
     if (p.otherBurdenPaidN > 0) {
       out.push(`  └ 예산 초과분 & 개인경비 금액 결제금액 : ${won(p.otherBurdenPaid)} (${p.otherBurdenPaidN}건)`)
+    }
+    // 미리 받아간 공금이 있으면 왜 정산액이 그렇게 나왔는지 여기서 설명된다.
+    if (p.received !== 0) {
+      out.push(`  └ 여행 중 공금에서 미리 받음 : ${won(p.received)}`)
     }
   }
   out.push('')

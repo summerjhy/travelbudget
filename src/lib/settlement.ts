@@ -1,5 +1,21 @@
-import type { Entry } from './types'
+import type { Entry, FundHandout } from './types'
 import type { MemberWithName } from './useTripMembers'
+
+/**
+ * 멤버별 순수령액(원화). 나눠준 것(out)은 더하고 돌려받은 것(in)은 뺀다.
+ * 정산식의 received(P) 항이다.
+ *
+ * 데이터 훅이 아니라 여기에 둔다 — settlement 은 순수 계산이라 supabase 를
+ * 끌고 들어오면 계산만 따로 돌려볼 수 없게 된다.
+ */
+export function receivedByMember(handouts: FundHandout[]): Map<string, number> {
+  const map = new Map<string, number>()
+  for (const h of handouts) {
+    const sign = h.direction === 'in' ? -1 : 1
+    map.set(h.member_id, (map.get(h.member_id) ?? 0) + sign * Number(h.amount))
+  }
+  return map
+}
 
 export interface DailyFundTotal {
   date: string
@@ -38,6 +54,8 @@ export interface PayerSummary {
   /** paidTotal 중 본인 개인경비를 본인이 낸 부분을 뺀 나머지(공금 결제 + 남의 개인경비 대신 결제). */
   otherBurdenPaid: number
   otherBurdenPaidN: number
+  /** 여행 중에 공금에서 미리 받은 순액(나눠받음 - 돌려줌). 없으면 0. */
+  received: number
 }
 
 export interface SettlementTransfer {
@@ -74,12 +92,20 @@ const EMPTY_RESULT: SettlementResult = {
  * 최종 정산 계산.
  *
  * 핵심 공식(CLAUDE.md 14단계 이후 정산 기능 설계 참고):
- *   fair(P)    = personal(P) + fund/n           // 정당히 부담할 몫
- *   paidRaw(P) = paid_by === P 인 entry 합       // 실제로 결제한 총액
- *   net(P)     = fair(P) - paidRaw(P) - budget/n + (총무면 budget)
+ *   fair(P)     = personal(P) + fund/n          // 정당히 부담할 몫
+ *   paidRaw(P)  = paid_by === P 인 entry 합      // 실제로 결제한 총액
+ *   received(P) = 공금에서 미리 받은 순액         // 나눠받음 - 돌려줌
+ *   net(P)      = fair(P) - paidRaw(P) - budget/n + received(P)
+ *                 + (총무면 budget - Σreceived)
  *
  * fund(공금 실사용액)와 budget(예산 총액)은 서로 다른 자금 흐름이라 절대
  * 하나의 항으로 섞지 않는다 — 섞으면 sum(net)이 0이 되지 않는다(검증 완료).
+ *
+ * received 항이 없으면 여행 중에 공금을 미리 받아 결제한 사람이 "자기 돈을
+ * 썼다"고 잡혀 정산 방향이 통째로 뒤집힌다(상하이 여행에서 실제로 겪음).
+ * 총무 항이 budget 이 아니라 budget - Σreceived 인 것은, 나눠준 만큼은 총무가
+ * 더 이상 들고 있지 않기 때문이다. 이래야 Σnet = 0 이 그대로 유지된다.
+ *
  * net > 0 이면 빚(더 내야 함), net < 0 이면 채권(돌려받아야 함).
  */
 export function computeSettlement(
@@ -87,6 +113,7 @@ export function computeSettlement(
   members: MemberWithName[],
   budget: number,
   treasurerId: string | null,
+  handouts: FundHandout[] = [],
 ): SettlementResult {
   const n = members.length
   if (n === 0) return EMPTY_RESULT
@@ -198,6 +225,7 @@ export function computeSettlement(
       paidTotalN: totalN,
       otherBurdenPaid: total - self,
       otherBurdenPaidN: totalN - selfN,
+      received: receivedByMember(handouts).get(m.id) ?? 0,
     }
   })
 
@@ -208,11 +236,17 @@ export function computeSettlement(
   }
 
   // ---- net 계산 ----
+  // 공금에서 미리 받은 순액. 이미 빠진 참여자에게 나간 것은 정산 대상이 아니라 뺀다.
+  const received = receivedByMember(handouts)
+  let handedOut = 0
+  for (const [id, v] of received) if (memberIds.has(id)) handedOut += v
+
   const rawNet = members.map((m) => {
     const fair = (personal.get(m.id) ?? 0) + fund / n
     const paidRaw = paidTotal.get(m.id) ?? 0
-    let v = fair - paidRaw - budget / n
-    if (treasurerId && m.id === treasurerId) v += budget
+    let v = fair - paidRaw - budget / n + (received.get(m.id) ?? 0)
+    // 나눠준 만큼은 총무 손을 떠났으므로 총무가 들고 있는 몫에서 뺀다.
+    if (treasurerId && m.id === treasurerId) v += budget - handedOut
     return { id: m.id, name: m.displayName, sort: m.sort, value: v }
   })
 
