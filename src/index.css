@@ -1285,3 +1285,29 @@ input, select, textarea {
   align-items: center;
   justify-content: center;
 }
+
+/* ---------------------- 첫 사용 안내 (온보딩) ---------------------- */
+.onb-dots {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin: 16px 0 4px;
+}
+.onb-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--line);
+}
+.onb-dots i.on {
+  background: var(--jade);
+  width: 18px;
+  border-radius: 3px;
+}
+/* 입력 예시는 실제 입력창처럼 보여야 "이렇게 적으면 되는구나"가 바로 온다 */
+.onb-eg {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px;
+  color: var(--ink);
+  padding: 3px 0;
+}

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { TripProvider, useTrip } from './context/TripContext'
+import { getOnboarded, setOnboarded } from './lib/session'
 import { CodeGate } from './pages/CodeGate'
 import { CreateTripForm } from './pages/CreateTripForm'
 import { AdminConsole } from './pages/AdminConsole'
@@ -9,6 +10,7 @@ import { AdminMenu } from './pages/AdminMenu'
 import { AdminBrowse } from './pages/AdminBrowse'
 import { AdminProvider, useAdmin } from './context/AdminContext'
 import { NameGate } from './pages/NameGate'
+import { Onboarding } from './pages/Onboarding'
 import { TripLayout } from './pages/TripLayout'
 import { HomeTab } from './pages/HomeTab'
 import { RecordTab } from './pages/RecordTab'
@@ -22,6 +24,7 @@ function Gate() {
   const { authed } = useAdmin()
   // null 이면 관리자 화면이 아니다. 인증 전에는 AdminGate 가 대신 뜬다.
   const [adminView, setAdminView] = useState<AdminView | null>(null)
+  const [onboarded, setOnboardedState] = useState(getOnboarded)
 
   if (loading) {
     return (
@@ -78,6 +81,17 @@ function Gate() {
     return <CodeGate onAdmin={() => setAdminView('menu')} />
   }
   if (!personName) return <NameGate />
+  // 이름까지 넣은 다음 딱 한 번. 설치 안내와 사용법을 여기서 보여준다.
+  if (!onboarded) {
+    return (
+      <Onboarding
+        onDone={() => {
+          setOnboarded(true)
+          setOnboardedState(true)
+        }}
+      />
+    )
+  }
 
   return (
     <Routes>

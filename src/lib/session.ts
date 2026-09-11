@@ -77,3 +77,18 @@ export function getStoredCostMode(tripCode: string): CostMode | null {
 export function setStoredCostMode(tripCode: string, mode: CostMode) {
   localStorage.setItem(`${COST_MODE_KEY}.${tripCode}`, mode)
 }
+
+const ONBOARDED_KEY = 'travelbudget.onboarded'
+
+/**
+ * 설치 안내 + 사용법을 한 번 봤는지. 여행별이 아니라 **기기별**이다 —
+ * 홈 화면 설치도 앱 쓰는 법도 여행이 바뀐다고 다시 볼 이유가 없다.
+ */
+export function getOnboarded(): boolean {
+  return localStorage.getItem(ONBOARDED_KEY) === '1'
+}
+
+export function setOnboarded(done: boolean) {
+  if (done) localStorage.setItem(ONBOARDED_KEY, '1')
+  else localStorage.removeItem(ONBOARDED_KEY)
+}

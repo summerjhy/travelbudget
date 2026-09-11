@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTrip } from '../context/TripContext'
+import { setOnboarded } from '../lib/session'
 import { MAX_NAME_LENGTH, useTripMembers } from '../lib/useTripMembers'
 import { useRates } from '../lib/useRates'
 import { useBudgets } from '../lib/useBudgets'
@@ -46,6 +47,15 @@ export function SettingsTab() {
   // 환율도 예산도 "지금" 기준이다. 여행 시작일이 아직 안 왔다고 그 날짜로 잡으면
   // 미래 날짜라 외부 API 가 값을 못 주고, 목록에도 오늘이 아닌 날짜가 떠서 헷갈린다.
   const defaultRateDate = todayForTrip(trip)
+
+  /**
+   * 온보딩 플래그만 지우면 이미 떠 있는 Gate 의 state 는 그대로라 화면이 안 바뀐다.
+   * 처음 들어온 것과 똑같은 경로를 타도록 새로고침한다.
+   */
+  function showOnboarding() {
+    setOnboarded(false)
+    window.location.reload()
+  }
 
   function pickTheme(next: ThemeCode) {
     setTheme(next)
@@ -346,6 +356,10 @@ export function SettingsTab() {
 
       <div className="gbox">
       <div className="group">💡 여행 가계부 사용 꿀팁</div>
+
+      <button className="btn quiet" style={{ marginBottom: 10 }} onClick={showOnboarding}>
+        📖 사용법 다시 보기
+      </button>
 
       <Collapsible title="🎨 어플 테마 색상 변경">
           <div className="box" style={{ padding: 14, marginBottom: 10 }}>
