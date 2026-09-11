@@ -3,9 +3,10 @@ import { useTrip } from '../context/TripContext'
 import { useTripMembers } from '../lib/useTripMembers'
 import { useRates } from '../lib/useRates'
 import { useBudgets } from '../lib/useBudgets'
-import { won } from '../lib/format'
-import { currencyLabel } from '../lib/currencies'
-import { foreignCurrencies } from '../lib/tripCurrency'
+import { money } from '../lib/format'
+import { currencyChip, currencyLabel } from '../lib/currencies'
+import { budgetCurrency } from '../lib/totals'
+import { defaultCurrency, foreignCurrencies, tripCurrencies } from '../lib/tripCurrency'
 
 function todayDate(): string {
   return new Date().toISOString().slice(0, 10)
@@ -15,10 +16,12 @@ export function SettingsTab() {
   const { trip, personName, switchTrip } = useTrip()
   const { members } = useTripMembers(trip?.id)
   const { rates, setManualRate, fetchNow } = useRates(trip?.id, trip?.code)
-  const { budgets, total, addBudget, removeBudget } = useBudgets(trip?.id)
+  const { budgets, totalsByCurrency, addBudget, removeBudget } = useBudgets(trip?.id)
 
   const [addAmount, setAddAmount] = useState('')
   const [addMemo, setAddMemo] = useState('')
+  // 새 예산 항목의 통화. 기본은 여행하는 나라 돈 — 보통 그걸로 환전해 오니까.
+  const [addCurrency, setAddCurrency] = useState<string | null>(null)
   // 통화별 직접입력 칸. 통화 코드 → 입력 중인 값.
   const [rateInputs, setRateInputs] = useState<Record<string, string>>({})
   const [rateBusy, setRateBusy] = useState(false)
@@ -26,6 +29,9 @@ export function SettingsTab() {
 
   const sortedRateDates = Object.keys(rates).sort()
   const currencies = foreignCurrencies(trip)
+  const budgetCurrencies = tripCurrencies(trip)
+  const activeBudgetCurrency =
+    addCurrency && budgetCurrencies.includes(addCurrency) ? addCurrency : defaultCurrency(trip)
   // 환율도 예산도 "지금" 기준이다. 여행 시작일이 아직 안 왔다고 그 날짜로 잡으면
   // 미래 날짜라 외부 API 가 값을 못 주고, 목록에도 오늘이 아닌 날짜가 떠서 헷갈린다.
   const defaultRateDate = todayDate()
@@ -33,7 +39,7 @@ export function SettingsTab() {
   async function handleAddBudget() {
     const amount = Number(addAmount.replace(/[^\d]/g, ''))
     if (!amount) return
-    const result = await addBudget(amount, defaultRateDate, addMemo.trim() || '추가 예산')
+    const result = await addBudget(amount, activeBudgetCurrency, defaultRateDate, addMemo.trim() || '추가 예산')
     if (result.ok) {
       setAddAmount('')
       setAddMemo('')
@@ -86,24 +92,49 @@ export function SettingsTab() {
               <span style={{ opacity: 0.6, fontSize: 11.5 }}> · {b.date}</span>
             </span>
             <span className="v">
-              {won(b.amount)}
+              {money(b.amount, budgetCurrency(b))}
               {budgets.length > 1 && (
                 <button className="x" style={{ color: 'var(--rose)', fontSize: 11, marginLeft: 6 }} onClick={() => handleRemoveBudget(b.id)}>삭제</button>
               )}
             </span>
           </div>
         ))}
-        <div className="tr" style={{ background: 'rgba(42,107,92,.06)' }}>
-          <span className="k" style={{ fontWeight: 600, color: 'var(--ink)' }}>합계</span>
-          <span className="v" style={{ fontWeight: 600 }}>{won(total)}</span>
-        </div>
+        {Object.keys(totalsByCurrency).map((c) => (
+          <div className="tr" style={{ background: 'rgba(42,107,92,.06)' }} key={c}>
+            <span className="k" style={{ fontWeight: 600, color: 'var(--ink)' }}>{c} 합계</span>
+            <span className="v" style={{ fontWeight: 600 }}>{money(totalsByCurrency[c], c)}</span>
+          </div>
+        ))}
       </div>
+      {budgetCurrencies.length > 1 && (
+        <div className="chips" style={{ marginBottom: 7 }}>
+          {budgetCurrencies.map((c) => (
+            <button
+              key={c}
+              className={'chip' + (activeBudgetCurrency === c ? ' on' : '')}
+              onClick={() => setAddCurrency(c)}
+              title={currencyLabel(c)}
+            >
+              {currencyChip(c)}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="row2" style={{ marginBottom: 7 }}>
-        <input className="inp num" inputMode="numeric" placeholder="추가 금액 (원)" value={addAmount} onChange={(e) => setAddAmount(e.target.value)} />
+        <input
+          className="inp num"
+          inputMode="numeric"
+          placeholder={`추가 금액 (${activeBudgetCurrency})`}
+          value={addAmount}
+          onChange={(e) => setAddAmount(e.target.value)}
+        />
         <input className="inp" placeholder="메모" style={{ flex: '0 0 38%' }} value={addMemo} onChange={(e) => setAddMemo(e.target.value)} />
       </div>
       <button className="btn ghost" onClick={handleAddBudget}>예산 추가</button>
-      <p className="note" style={{ marginTop: 9 }}>여행 중에 공금을 더 걷으면 여기에 추가하세요. 예산 총액과 잔여가 바로 반영돼요.</p>
+      <p className="note" style={{ marginTop: 9 }}>
+        걷은 돈을 통화별로 넣으세요. <b>이미 환전한 돈은 그 통화로 넣으면 그 금액이 그대로 예산이 돼요</b> —
+        환율이 바뀌어도 잔여가 흔들리지 않아요. 그 통화 주머니가 없는 지출은 원화 주머니에서 빠집니다.
+      </p>
 
       {currencies.length > 0 && (
         <>

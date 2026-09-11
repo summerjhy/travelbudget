@@ -10,7 +10,7 @@ import { parseText, parserConfig, type ParsedEntry } from '../lib/parser'
 import { guessCategory } from '../lib/categories'
 import { latestRateFor, rateFor, resolveAmount, type RateTable } from '../lib/rates'
 import { computeTotals, entryCurrency } from '../lib/totals'
-import { foreign, won } from '../lib/format'
+import { foreign, money, won } from '../lib/format'
 import { currencyChip, currencyLabel, currencyName, currencySuffix } from '../lib/currencies'
 import { BASE_CURRENCY, defaultCurrency, summaryCurrency, tripCurrencies } from '../lib/tripCurrency'
 import { getStoredCurrency, setStoredCurrency } from '../lib/session'
@@ -36,7 +36,7 @@ export function RecordTab() {
   const { members } = useTripMembers(trip?.id)
   const { rates, fetchNow } = useRates(trip?.id, trip?.code)
   const { entries, addEntries, refresh } = useEntries(trip?.id)
-  const { total: budgetTotal } = useBudgets(trip?.id)
+  const { budgets } = useBudgets(trip?.id)
   const { online } = useOfflineSync(trip?.id, refresh)
   usePolling(refresh, !!trip?.id)
 
@@ -54,7 +54,7 @@ export function RecordTab() {
   // 통화 선택 버튼은 고를 게 둘 이상일 때만 띄운다.
   const showCurrencyPicker = currencies.length >= 2
   const summary = summaryCurrency(trip)
-  const totals = computeTotals(entries, members, budgetTotal, summary, latestRateFor(rates, summary))
+  const totals = computeTotals(entries, members, budgets, summary)
 
   // 입력 단위: 한 번 고르면 바꾸기 전까지 유지된다. 처음에는 여행하는 나라 돈.
   const activeCurrency =
@@ -413,15 +413,21 @@ export function RecordTab() {
 
       <div className="sec">잔여 예산</div>
       <div className="box">
-        <div className="tr"><span className="k">예산 총액</span><span className="v">{won(totals.budget)}</span></div>
-        <div className="tr"><span className="k">공금 사용</span><span className="v"><Pair amount={totals.fund.cny} krw={totals.fund.krw} currency={summary} /></span></div>
-        <div className="tr">
-          <span className="k">잔여</span>
-          <span className="v" style={{ fontWeight: 600, color: totals.remain < 0 ? 'var(--rose)' : 'var(--jade)' }}>
-            <Pair amount={totals.remainCny} krw={totals.remain} currency={summary} />
-          </span>
-        </div>
+        {totals.pots.map((pot) => (
+          <div className="tr" key={pot.currency}>
+            <span className="k">
+              {currencyName(pot.currency)}
+              <span style={{ opacity: 0.6, fontSize: 11.5 }}> · 예산 {money(pot.budget, pot.currency)} 중 {money(pot.spent, pot.currency)} 사용</span>
+            </span>
+            <span className="v" style={{ fontWeight: 600, color: pot.remain < 0 ? 'var(--rose)' : 'var(--jade)' }}>
+              {money(pot.remain, pot.currency)}
+            </span>
+          </div>
+        ))}
       </div>
+      <p className="note" style={{ marginTop: 7 }}>
+        공금은 통화별로 따로 셉니다. 이미 환전해둔 돈이라 환율이 바뀌어도 잔여는 그대로예요.
+      </p>
       <div style={{ height: 30 }} />
     </section>
   )

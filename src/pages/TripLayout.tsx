@@ -6,36 +6,39 @@ import { useEntries } from '../lib/useEntries'
 import { useBudgets } from '../lib/useBudgets'
 import { usePolling } from '../lib/usePolling'
 import { computeTotals } from '../lib/totals'
-import { foreign, won } from '../lib/format'
+import { money } from '../lib/format'
 import { summaryCurrency } from '../lib/tripCurrency'
-import { latestRateFor } from '../lib/rates'
 
 export function TripLayout() {
   const { trip } = useTrip()
   const { members } = useTripMembers(trip?.id)
-  const { rates } = useRates(trip?.id, trip?.code)
+  useRates(trip?.id, trip?.code)
   const { entries, refresh } = useEntries(trip?.id)
-  const { total: budgetTotal } = useBudgets(trip?.id)
+  const { budgets } = useBudgets(trip?.id)
   usePolling(refresh, !!trip?.id)
 
-  const summary = summaryCurrency(trip)
-  const totals = computeTotals(entries, members, budgetTotal, summary, latestRateFor(rates, summary))
+  const totals = computeTotals(entries, members, budgets, summaryCurrency(trip))
 
   return (
     <div className="wrap">
       <header className="head">
         <div className="eyebrow">{trip?.code}</div>
         <h1 className="title">{trip?.name}</h1>
-        <div className="remain">
-          <b>{won(totals.remain)}</b>
-          {summary && <em>{foreign(totals.remainCny, summary)}</em>}
-          <span>잔여 · 예산 {won(totals.budget)} 중 {totals.pct.toFixed(1)}% 사용</span>
-        </div>
-        <div className="gauge">
-          <i
-            className={totals.remain < 0 ? 'over' : ''}
-            style={{ width: `${Math.min(100, Math.max(0, totals.pct))}%` }}
-          />
+        <div className="pots">
+          {totals.pots.map((pot, i) => (
+            <div className={'pot' + (i > 0 ? ' sub' : '')} key={pot.currency}>
+              <b>{money(pot.remain, pot.currency)}</b>
+              <em>
+                잔여 · 예산 {money(pot.budget, pot.currency)} 중 {pot.pct.toFixed(1)}% 사용
+              </em>
+              <div className="gauge">
+                <i
+                  className={pot.remain < 0 ? 'over' : ''}
+                  style={{ width: `${Math.min(100, Math.max(0, pot.pct))}%` }}
+                />
+              </div>
+            </div>
+          ))}
         </div>
       </header>
 

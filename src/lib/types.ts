@@ -30,7 +30,10 @@ export interface Budget {
   id: string
   trip_id: string
   date: string
+  /** currency 통화로 표시한 금액. 이미 환전한 돈이면 환율로 환산하지 않는다. */
   amount: number
+  /** 이 예산을 들고 있는 통화. 예전 행은 null 로 올 수 있고 그때는 KRW 다. */
+  currency: string | null
   memo: string | null
   created_at: string
 }

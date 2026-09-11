@@ -5,10 +5,11 @@ import { useRates } from '../lib/useRates'
 import { useEntries, type PendingEntry } from '../lib/useEntries'
 import { useBudgets } from '../lib/useBudgets'
 import { usePolling } from '../lib/usePolling'
-import { latestRateFor, resolveAmount } from '../lib/rates'
+import { resolveAmount } from '../lib/rates'
 import { computeTotals, entryCurrency } from '../lib/totals'
+import { money } from '../lib/format'
 import { CATEGORIES } from '../lib/categories'
-import { currencyChip, currencyLabel, currencySuffix } from '../lib/currencies'
+import { currencyChip, currencyLabel, currencyName, currencySuffix } from '../lib/currencies'
 import { BASE_CURRENCY, summaryCurrency, tripCurrencies } from '../lib/tripCurrency'
 import { Pair } from '../components/Pair'
 
@@ -27,7 +28,7 @@ export function HistoryTab() {
   const { members } = useTripMembers(trip?.id)
   const { rates } = useRates(trip?.id, trip?.code)
   const { entries, updateEntry, removeEntry, refresh } = useEntries(trip?.id)
-  const { total: budgetTotal } = useBudgets(trip?.id)
+  const { budgets } = useBudgets(trip?.id)
   usePolling(refresh, !!trip?.id)
 
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
@@ -38,7 +39,7 @@ export function HistoryTab() {
 
   const currencies = tripCurrencies(trip)
   const summary = summaryCurrency(trip)
-  const totals = computeTotals(entries, members, budgetTotal, summary, latestRateFor(rates, summary))
+  const totals = computeTotals(entries, members, budgets, summary)
   const categories = useMemo(() => CATEGORIES.map(([name]) => name).concat('기타'), [])
 
   const filtered = entries.filter((e) => {
@@ -123,8 +124,12 @@ export function HistoryTab() {
       <div className="box">
         <div className="tr"><span className="k">공금 · {totals.fund.n}건</span><span className="v"><Pair amount={totals.fund.cny} krw={totals.fund.krw} currency={summary} /></span></div>
         <div className="tr"><span className="k">개인 합계</span><span className="v"><Pair amount={totals.personCny} krw={totals.personKrw} currency={summary} /></span></div>
-        <div className="tr"><span className="k">예산 사용률</span><span className="v">{totals.pct.toFixed(1)}%</span></div>
-        <div className="tr"><span className="k">잔여 예산</span><span className="v" style={{ fontWeight: 600 }}><Pair amount={totals.remainCny} krw={totals.remain} currency={summary} /></span></div>
+        {totals.pots.map((pot) => (
+          <div className="tr" key={pot.currency}>
+            <span className="k">잔여 · {currencyName(pot.currency)}<span style={{ opacity: 0.6, fontSize: 11.5 }}> · {pot.pct.toFixed(1)}% 사용</span></span>
+            <span className="v" style={{ fontWeight: 600 }}>{money(pot.remain, pot.currency)}</span>
+          </div>
+        ))}
       </div>
 
       <div className="sec">필터</div>
