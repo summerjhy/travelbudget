@@ -58,13 +58,14 @@ export interface PayerSummary {
   fundPaid: number
   fundPaidN: number
   /**
-   * 결제에 쓸 수 있게 손에 쥐고 있던 공금.
-   * 이체로 미리 받은 순액 + (총무면 나눠주고 남아 본인이 들고 있던 예산).
+   * 선지급된 공금. 이체로 미리 받은 순액 + (총무면 나눠주고 남아 본인이 들고 있던 예산).
+   * 화면 문구: "선지급된 공금".
    */
   fundHeld: number
   /**
-   * 공금 결제 중 실제로 자기 돈이 나간 몫 (fundPaid - fundHeld).
+   * 선지급받은 공금을 넘겨 결제한 금액 (fundPaid - fundHeld). 그만큼 자기 돈이 나갔다.
    * 음수면 공금을 덜 써서 남긴 것이다.
+   * 화면 문구: "공금 초과결제분" / 음수일 때 "쓰고 남은 공금".
    */
   ownPocket: number
 }

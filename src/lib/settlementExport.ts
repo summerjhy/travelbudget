@@ -42,7 +42,7 @@ export function settlementToCsv(result: SettlementResult, ctx: Ctx): string {
   lines.push('')
 
   lines.push('[결제자별 총액]')
-  lines.push(['결제자', '결제 총액', '건수', '공금 결제액', '건수', '손에 쥔 공금', '자기 돈으로 낸 몫'].map(cell).join(','))
+  lines.push(['결제자', '결제 총액', '건수', '공금 결제액', '건수', '선지급된 공금', '공금 초과결제분'].map(cell).join(','))
   for (const p of result.payerSummaries) {
     lines.push([p.name, p.paidTotal, p.paidTotalN, p.fundPaid, p.fundPaidN, p.fundHeld, p.ownPocket].map(cell).join(','))
   }
@@ -103,10 +103,10 @@ export function settlementToText(result: SettlementResult, ctx: Ctx): string {
     // 공금을 쥐고 결제한 사람은 그 돈이 자기 돈이 아니다. 이걸 안 보여주면
     // 결제액 전부를 자기가 부담한 것처럼 읽혀 정산 결과가 이상해 보인다.
     if (p.fundHeld !== 0) {
-      out.push(`  └ 손에 쥔 공금 : ${won(p.fundHeld)}`)
+      out.push(`  └ 선지급된 공금 : ${won(p.fundHeld)}`)
       out.push(
         p.ownPocket >= 0
-          ? `  └ 자기 돈으로 낸 몫 : ${won(p.ownPocket)}`
+          ? `  └ 공금 초과결제분 : ${won(p.ownPocket)}`
           : `  └ 쓰고 남은 공금 : ${won(-p.ownPocket)}`,
       )
     }
