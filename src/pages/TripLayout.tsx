@@ -15,8 +15,12 @@ export function TripLayout() {
   const { allMembers } = useTripMembers(trip?.id)
   const { rates } = useRates(trip?.id, trip?.code)
   const { entries, refresh } = useEntries(trip?.id)
-  const { total: budgetTotal } = useBudgets(trip?.id)
+  const { total: budgetTotal, refresh: refreshBudgets } = useBudgets(trip?.id)
   usePolling(refresh, !!trip?.id)
+  // 예산도 폴링한다. 헤더(TripLayout)는 탭을 옮겨도 언마운트되지 않아서, 이게 없으면
+  // 다른 사람이 공금을 더 걷어도 새로고침 전까지 낡은 잔여가 계속 보인다.
+  // useBudgets 는 여행별 공유 캐시라 여기서 한 번만 돌리면 모든 화면이 같이 갱신된다.
+  usePolling(refreshBudgets, !!trip?.id)
 
   const summary = summaryCurrency(trip)
   const totals = computeTotals(entries, allMembers, budgetTotal, summary, latestRateFor(rates, summary))
