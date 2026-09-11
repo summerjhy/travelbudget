@@ -251,11 +251,23 @@ export function computeSettlement(
   })
 
   // 반올림 오차 보정: 정수로 반올림한 뒤 합이 0이 아니면 가장 큰 채권자(절대값 기준)에게 몰아준다.
+  //
+  // 여기서 흡수해도 되는 건 반올림에서 생긴 몇 원뿐이다. 그보다 크면 계산 전제가
+  // 깨진 것(예: 총무 미지정이라 예산 항이 아무에게도 안 붙음)인데, 그걸 조용히
+  // 한 사람에게 떠넘기면 숫자는 멀쩡해 보이면서 틀린 정산이 나온다. 실제로
+  // 총무를 지정하지 않은 여행에서 수십만 원이 통째로 흡수되는 걸 발견했다.
   const rounded = rawNet.map((x) => ({ ...x, value: Math.round(x.value) }))
   const sum = rounded.reduce((s, x) => s + x.value, 0)
   if (sum !== 0 && rounded.length > 0) {
     const target = rounded.reduce((best, x) => (Math.abs(x.value) > Math.abs(best.value) ? x : best), rounded[0])
     target.value -= sum
+    // 반올림으로 생길 수 있는 최대 오차는 인원수 × 1원이다.
+    if (Math.abs(sum) > n) {
+      warnings.push(
+        `정산 합계가 ${Math.abs(sum).toLocaleString('ko-KR')}원 어긋나서 ${target.name}님 몫으로 몰아넣었어요. ` +
+          '모임통장 관리자를 지정하면 정확하게 계산돼요.',
+      )
+    }
   }
 
   // ---- 5. 그리디 최소송금 매칭 ----

@@ -43,7 +43,7 @@ interface PreviewItem extends EntryFieldsValue {
 const MAX_PHOTOS = 5
 
 export function RecordTab() {
-  const { trip, personName, member } = useTrip()
+  const { trip, personName, member, setTreasurer } = useTrip()
   const { members, allMembers } = useTripMembers(trip?.id)
   const { rates, fetchNow } = useRates(trip?.id, trip?.code)
   const { entries, addEntries, refresh } = useEntries(trip?.id)
@@ -410,6 +410,36 @@ export function RecordTab() {
     setLastSavedIds(result.inserted ? result.inserted.map((e) => e.id) : null)
     setPreview([])
     setText('')
+  }
+
+  // 총무(모임통장 관리자)가 없으면 기록을 막는다.
+  // 정산식의 예산 항은 "총무가 공금을 들고 있다"는 전제로 세워져 있어서,
+  // 지정 없이 기록이 쌓이면 나중에 정산 숫자가 조용히 어긋난다.
+  if (trip && !trip.treasurer_member_id) {
+    return (
+      <section className="pad">
+        <div className="gbox">
+          <div className="sec first">💳 먼저 모임통장 관리자를 정해주세요</div>
+          <p className="note" style={{ marginBottom: 12 }}>
+            공금을 실제로 들고 있는 사람이에요. 이걸 정해야 여행이 끝나고 최종 정산이 맞게 나와요.
+            <b> 지금 정하지 않으면 기록을 시작할 수 없어요.</b> 나중에 설정 탭에서 바꿀 수 있어요.
+          </p>
+          <div className="chips">
+            {members.map((m) => (
+              <button key={m.id} className="chip" onClick={() => setTreasurer(m.id)}>
+                {m.displayName}
+              </button>
+            ))}
+          </div>
+          {members.length === 0 && (
+            <p className="note" style={{ marginTop: 9, color: 'var(--marigold)' }}>
+              아직 참여자가 없어요. 설정 탭에서 참여자를 먼저 추가해주세요.
+            </p>
+          )}
+        </div>
+        <div style={{ height: 30 }} />
+      </section>
+    )
   }
 
   return (
