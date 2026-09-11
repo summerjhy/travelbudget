@@ -7,6 +7,7 @@ import { useBudgets } from '../lib/useBudgets'
 import { usePolling } from '../lib/usePolling'
 import { computeTotals } from '../lib/totals'
 import { foreign, won } from '../lib/format'
+import { currencyFlag } from '../lib/currencies'
 import { BASE_CURRENCY, summaryCurrency } from '../lib/tripCurrency'
 
 export function TripLayout() {
@@ -41,32 +42,38 @@ export function TripLayout() {
             )}
           </div>
         </div>
-        {totals.pots.map((pot, i) => {
-          const isForeign = pot.currency !== BASE_CURRENCY && pot.budgetForeign > 0
-          return (
-            <div key={pot.currency}>
-              <div className="remain">
-                {/* 외화 주머니는 지갑에 남은 외화가 주인공이고 원화는 참고값이다. */}
-                <b>{i === 0 ? '💰 ' : ''}{isForeign ? foreign(pot.remainForeign, pot.currency) : won(pot.remainKrw)}</b>
-                <em>{isForeign ? won(pot.remainKrw) : ''}</em>
-                <span>
+        {/* 주머니는 항상 최대 2열로 깔린다 — 2개면 한 줄, 3~4개면 두 줄. */}
+        <div className={'pots' + (totals.pots.length > 1 ? ' multi' : '')}>
+          {totals.pots.map((pot) => {
+            const isForeign = pot.currency !== BASE_CURRENCY && pot.budgetForeign > 0
+            return (
+              <div className="pot" key={pot.currency}>
+                <div className="remain">
+                  {/* 외화 주머니는 지갑에 남은 외화가 주인공이고 원화는 참고값이다. */}
+                  <b>
+                    <span className="flag" aria-hidden="true">{currencyFlag(pot.currency)}</span>
+                    {isForeign ? foreign(pot.remainForeign, pot.currency) : won(pot.remainKrw)}
+                  </b>
+                  {isForeign && <em>{won(pot.remainKrw)}</em>}
                   <span>
-                    잔여 · {isForeign
-                      ? `${foreign(pot.budgetForeign, pot.currency)}${pot.prepaid ? ' 환전' : ' 한도'}`
-                      : won(pot.budgetKrw)}
+                    <span>
+                      잔여 · {isForeign
+                        ? `${foreign(pot.budgetForeign, pot.currency)}${pot.prepaid ? ' 환전' : ' 한도'}`
+                        : won(pot.budgetKrw)}
+                    </span>
+                    <span>{pot.pct.toFixed(1)}% 사용</span>
                   </span>
-                  <span>{pot.pct.toFixed(1)}% 사용</span>
-                </span>
+                </div>
+                <div className="gauge">
+                  <i
+                    className={pot.remainKrw < 0 ? 'over' : ''}
+                    style={{ width: `${Math.min(100, Math.max(0, pot.pct))}%` }}
+                  />
+                </div>
               </div>
-              <div className="gauge">
-                <i
-                  className={pot.remainKrw < 0 ? 'over' : ''}
-                  style={{ width: `${Math.min(100, Math.max(0, pot.pct))}%` }}
-                />
-              </div>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </header>
 
       <Outlet />

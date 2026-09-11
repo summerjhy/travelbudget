@@ -1311,3 +1311,54 @@ input, select, textarea {
   color: var(--ink);
   padding: 3px 0;
 }
+
+/* ---------------------- 공금 주머니 (헤더) ---------------------- */
+/* 통화가 여럿이면 항상 2열로 깔린다 — 2개면 한 줄, 3~4개면 두 줄. */
+.pots.multi {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+}
+/* 열이 좁아지므로 한 칸 안에서는 세로로 쌓고 글자도 줄인다. */
+.pots.multi .remain {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  margin: 4px 0 2px;
+}
+.pots.multi .remain b {
+  font-size: 17px;
+}
+.pots.multi .remain em {
+  font-size: 12px;
+}
+.pots.multi .remain > span {
+  font-size: 11px;
+  flex-direction: column;
+  line-height: 1.5;
+}
+/*
+ * 원화 칸에는 외화 보조줄이 없어 한 줄이 짧다. 게이지를 칸 바닥에 붙여
+ * 나란히 놓인 주머니들의 막대 높이를 맞춘다.
+ */
+.pots.multi .pot {
+  display: flex;
+  flex-direction: column;
+}
+.pots.multi .gauge {
+  height: 5px;
+  margin-top: auto;
+  padding-top: 0;
+}
+.pots.multi .remain {
+  margin-bottom: 6px;
+}
+/*
+ * 국기는 숫자와 같은 줄에 둔다.
+ * `.remain span` 이 width:100%/display:flex 라 그대로 두면 국기가 혼자 한 줄을 차지한다.
+ */
+.remain b .flag {
+  display: inline;
+  width: auto;
+  margin-right: 6px;
+}

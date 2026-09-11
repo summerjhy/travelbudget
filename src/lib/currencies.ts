@@ -177,6 +177,29 @@ export function currencyChip(code: string): string {
   return suffix === code ? code : `${suffix} ${code}`
 }
 
+/**
+ * 통화별 국기. 헤더에 주머니가 여럿 뜰 때 어느 나라 돈인지 한눈에 갈리라고 붙인다.
+ * 여러 나라가 함께 쓰는 통화(EUR)는 그 통화권 깃발을, 나라 깃발이 마땅치 않으면 비워둔다.
+ */
+const FLAGS: Record<string, string> = {
+  KRW: '🇰🇷', JPY: '🇯🇵', CNY: '🇨🇳', HKD: '🇭🇰', TWD: '🇹🇼', MOP: '🇲🇴', MNT: '🇲🇳',
+  THB: '🇹🇭', VND: '🇻🇳', SGD: '🇸🇬', MYR: '🇲🇾', IDR: '🇮🇩', PHP: '🇵🇭', KHR: '🇰🇭',
+  LAK: '🇱🇦', MMK: '🇲🇲', BND: '🇧🇳', INR: '🇮🇳', NPR: '🇳🇵', LKR: '🇱🇰', PKR: '🇵🇰',
+  BDT: '🇧🇩', MVR: '🇲🇻', UZS: '🇺🇿', KZT: '🇰🇿', AED: '🇦🇪', QAR: '🇶🇦', SAR: '🇸🇦',
+  OMR: '🇴🇲', ILS: '🇮🇱', JOD: '🇯🇴', TRY: '🇹🇷', EUR: '🇪🇺', GBP: '🇬🇧', CHF: '🇨🇭',
+  SEK: '🇸🇪', NOK: '🇳🇴', DKK: '🇩🇰', ISK: '🇮🇸', CZK: '🇨🇿', PLN: '🇵🇱', HUF: '🇭🇺',
+  RON: '🇷🇴', BGN: '🇧🇬', RSD: '🇷🇸', GEL: '🇬🇪', UAH: '🇺🇦', RUB: '🇷🇺', USD: '🇺🇸',
+  CAD: '🇨🇦', MXN: '🇲🇽', CUP: '🇨🇺', CRC: '🇨🇷', BRL: '🇧🇷', ARS: '🇦🇷', CLP: '🇨🇱',
+  PEN: '🇵🇪', BOB: '🇧🇴', COP: '🇨🇴', AUD: '🇦🇺', NZD: '🇳🇿', FJD: '🇫🇯', XPF: '🇵🇫',
+  EGP: '🇪🇬', MAD: '🇲🇦', TND: '🇹🇳', ZAR: '🇿🇦', KES: '🇰🇪', TZS: '🇹🇿', ETB: '🇪🇹',
+  NGN: '🇳🇬', NAD: '🇳🇦', MUR: '🇲🇺', SCR: '🇸🇨',
+}
+
+/** `TWD` → `🇹🇼`. 목록에 없으면 빈 문자열이라 그냥 코드만 보인다. */
+export function currencyFlag(code: string): string {
+  return FLAGS[code] ?? ''
+}
+
 /** `TWD` → `대만 달러`. "1대만 달러당 원화"처럼 문장에 넣어 쓴다. */
 export function currencyName(code: string): string {
   const c = BY_CODE.get(code)
