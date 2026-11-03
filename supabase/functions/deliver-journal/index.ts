@@ -81,7 +81,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: trip } = await admin
     .from('journal_trips')
-    .select('id, name')
+    .select('id, name, delivery_open')
     .eq('code', body.tripCode)
     .maybeSingle()
   if (!trip) return jsonResponse({ error: '여행을 찾을 수 없어요.' }, 404)
@@ -106,6 +106,12 @@ Deno.serve(async (req: Request) => {
       .maybeSingle()
     if (existing) return jsonResponse({ text: existing.body, alreadyDelivered: true }, 200)
     return jsonResponse({ text: null, alreadyDelivered: false }, 200)
+  }
+
+  // 관리자가 발송을 허용하기 전에는 첫 발송도, 다시 발송(갱신)도 막는다.
+  // 화면(DeliverTab)도 먼저 막지만 그건 편의일 뿐이라 여기서 반드시 한 번 더 확인한다.
+  if (!trip.delivery_open) {
+    return jsonResponse({ error: '아직 발송기간이 아니에요. 관리자에게 문의해주세요.' }, 403)
   }
 
   const { data: notes, error: notesError } = await admin

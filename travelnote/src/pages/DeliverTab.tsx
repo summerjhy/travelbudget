@@ -2,15 +2,30 @@ import { useEffect, useState } from 'react'
 import { useNote } from '../context/NoteContext'
 import { deliverJournal, checkDelivered } from '../lib/deliverJournal'
 import { shareText } from '../lib/shareText'
-import { useReceivedDelivery, fetchMemberName } from '../lib/useReceivedDelivery'
+import { usePolling } from '../lib/usePolling'
+import { useReceivedDelivery, revealObserver } from '../lib/useReceivedDelivery'
 import { Bunny } from '../components/illustrations/Bunny'
 import { Squirrel } from '../components/illustrations/Squirrel'
 import { Heart, Star } from '../components/illustrations/Decor'
 import { Confetti } from '../components/Confetti'
 
+/** deliver-journal이 발송 닫힘(403)일 때 돌려주는 문구와 같게 유지한다. */
+const DELIVERY_CLOSED_MESSAGE = '아직 발송기간이 아니에요. 관리자에게 문의해주세요.'
+const REVEAL_CLOSED_MESSAGE = '아직 공개 전이에요. 관리자가 다 같이 공개하면 확인할 수 있어요.'
+
 export function DeliverTab() {
-  const { trip, member } = useNote()
+  const { trip, member, refreshTrip } = useNote()
   const { delivery, loading: receivedLoading } = useReceivedDelivery(trip?.id, member?.id)
+
+  // 관리자가 발송을 열었는지는 여행 정보에 있으므로, 탭을 여는 순간과 그 뒤
+  // 주기적으로 다시 읽어 스위치를 켜면 새로고침 없이 버튼이 풀리게 한다.
+  // 버튼은 막지 않고 누르면 안내 문구를 띄운다. 실제 차단은 deliver-journal이 서버에서 한다.
+  useEffect(() => {
+    refreshTrip()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  usePolling(refreshTrip, !!trip?.id)
+  const deliveryOpen = !!trip?.delivery_open
 
   const [sending, setSending] = useState(false)
   const [sentText, setSentText] = useState<string | null>(null)
@@ -21,6 +36,7 @@ export function DeliverTab() {
   const [revealingName, setRevealingName] = useState(false)
   const [revealedName, setRevealedName] = useState<string | null>(null)
   const [revealBusy, setRevealBusy] = useState(false)
+  const [revealNotice, setRevealNotice] = useState<string | null>(null)
 
   // journal_deliveries는 RLS가 target_member_id 기준으로만 조회를 허용해서
   // (발송한 사람은 자기가 보낸 걸 다시 못 읽는다 — 그 정책은 "받은 사람만
@@ -39,8 +55,12 @@ export function DeliverTab() {
 
   async function handleDeliver() {
     if (!trip || !member) return
-    setSending(true)
     setError(null)
+    if (!deliveryOpen) {
+      setError(DELIVERY_CLOSED_MESSAGE)
+      return
+    }
+    setSending(true)
     const result = await deliverJournal(trip.code, member.id)
     setSending(false)
     if (!result.ok) {
@@ -61,13 +81,26 @@ export function DeliverTab() {
 
   async function handleRevealName() {
     if (!delivery) return
-    setRevealingName(true)
-    if (!revealedName) {
-      setRevealBusy(true)
-      const name = await fetchMemberName(delivery.observerMemberId)
-      setRevealedName(name)
-      setRevealBusy(false)
+    setRevealNotice(null)
+    // 공개는 관리자가 "다 같이 공개"를 켠 순간 모두에게 동시에 열린다.
+    // 실제 차단은 journal_reveal_observer()가 하고, 여기는 안내 문구용 확인이다.
+    if (!trip?.revealed_at) {
+      setRevealNotice(REVEAL_CLOSED_MESSAGE)
+      return
     }
+    if (revealedName) {
+      setRevealingName(true)
+      return
+    }
+    setRevealBusy(true)
+    const name = await revealObserver()
+    setRevealBusy(false)
+    if (!name) {
+      setRevealNotice(REVEAL_CLOSED_MESSAGE)
+      return
+    }
+    setRevealedName(name)
+    setRevealingName(true)
   }
 
   if (!trip?.matched_at) {
@@ -138,9 +171,10 @@ export function DeliverTab() {
           <div className="box" style={{ padding: '13px 14px' }}>
             <p className="note" style={{ whiteSpace: 'pre-line', color: 'var(--ink)' }}>{delivery.body}</p>
           </div>
-          <button className="btn ghost sm" style={{ marginTop: 8 }} onClick={handleRevealName}>
-            🕵️ 나를 관찰한 친구의 이름은?
+          <button className="btn ghost sm" style={{ marginTop: 8 }} onClick={handleRevealName} disabled={revealBusy}>
+            {revealBusy ? '확인하는 중...' : '🕵️ 나를 관찰한 친구의 이름은?'}
           </button>
+          {revealNotice && <p className="err">{revealNotice}</p>}
         </>
       )}
       <div style={{ height: 20 }} />
@@ -151,7 +185,7 @@ export function DeliverTab() {
           <div className="modal-card" style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
             <p className="title" style={{ justifyContent: 'center' }}>🎉 짜잔!</p>
             <p className="body" style={{ fontSize: 22, fontWeight: 700, color: 'var(--coral-ink)' }}>
-              {revealBusy ? '확인하는 중...' : revealedName}
+              {revealedName}
             </p>
             <p className="note" style={{ margin: '0 0 16px' }}>이 여행 내내 나를 관찰해온 비밀친구예요.</p>
             <button className="btn" onClick={() => setRevealingName(false)}>닫기</button>

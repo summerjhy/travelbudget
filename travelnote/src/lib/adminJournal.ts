@@ -14,6 +14,7 @@ export interface AdminJournalTrip {
   matched_at: string | null
   revealed_at: string | null
   guide_steps?: string[] | null
+  delivery_open?: boolean
   created_at: string
   member_count: number
 }
@@ -24,6 +25,8 @@ export interface JournalTripPatch {
   startDate?: string | null
   endDate?: string | null
   guideSteps?: string[] | null
+  deliveryOpen?: boolean
+  revealed?: boolean
 }
 
 async function call<T>(

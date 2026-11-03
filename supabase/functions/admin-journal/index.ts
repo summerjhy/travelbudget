@@ -23,6 +23,10 @@ interface Body {
     endDate?: string | null
     /** 홈 "어떻게 쓰나요?" 단계. 빈 배열/null이면 기본 안내로 되돌린다. */
     guideSteps?: string[] | null
+    /** 발송 허용 스위치. 켜기 전엔 deliver-journal이 발송을 거부한다. */
+    deliveryOpen?: boolean
+    /** 다 같이 공개 스위치. true면 revealed_at=지금, false면 null(공개 취소). */
+    revealed?: boolean
   }
 }
 
@@ -63,7 +67,7 @@ Deno.serve(async (req: Request) => {
   if (body.action === 'list') {
     const { data: trips, error } = await supabase
       .from('journal_trips')
-      .select('id, code, name, start_date, end_date, matched_at, revealed_at, guide_steps, created_at')
+      .select('id, code, name, start_date, end_date, matched_at, revealed_at, guide_steps, delivery_open, created_at')
       .order('created_at', { ascending: false })
     if (error) return jsonResponse({ error: error.message }, 500)
 
@@ -104,6 +108,8 @@ Deno.serve(async (req: Request) => {
       }
       patch.guide_steps = steps.length > 0 ? steps : null
     }
+    if (p.deliveryOpen !== undefined) patch.delivery_open = !!p.deliveryOpen
+    if (p.revealed !== undefined) patch.revealed_at = p.revealed ? new Date().toISOString() : null
     if (Object.keys(patch).length === 0) return jsonResponse({ error: '바뀐 내용이 없습니다.' }, 400)
 
     const { data, error } = await supabase

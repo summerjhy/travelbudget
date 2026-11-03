@@ -8,6 +8,8 @@ export interface JournalTrip {
   revealed_at: string | null
   /** 홈 "어떻게 쓰나요?" 단계(관리자 지정). null이면 DEFAULT_GUIDE_STEPS */
   guide_steps?: string[] | null
+  /** 관리자가 발송을 허용했는지. 마이그레이션 0020 전에는 undefined(=닫힘으로 취급) */
+  delivery_open?: boolean
   created_at: string
 }
 

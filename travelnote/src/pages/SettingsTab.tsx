@@ -5,7 +5,7 @@ import { enableJournalPush, pushEnabled, pushSupported, sendTestJournalPush } fr
 import { useTripMembers } from '../lib/useTripMembers'
 import { withEmoji } from '../lib/memberEmoji'
 import { useAdmin } from '../context/AdminContext'
-import { updateJournalTrip } from '../lib/adminJournal'
+import { updateJournalTrip, type JournalTripPatch } from '../lib/adminJournal'
 import { DEFAULT_GUIDE_STEPS, MAX_GUIDE_STEPS, MAX_GUIDE_STEP_LENGTH, guideStepsOf } from '../lib/guideSteps'
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
@@ -83,6 +83,65 @@ function GuideStepsEditor() {
   )
 }
 
+/**
+ * 발송 허용 / 다 같이 공개 스위치(관리자 전용). 발송을 켜기 전에는
+ * deliver-journal이, 공개를 켜기 전에는 journal_reveal_observer()가 거부한다.
+ * GuideStepsEditor와 같은 이유로 관리자 비밀번호가 메모리에 있을 때만 렌더된다.
+ */
+function DeliveryToggle() {
+  const { trip, refreshTrip } = useNote()
+  const { password } = useAdmin()
+  const [busy, setBusy] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
+  const open = !!trip?.delivery_open
+  const revealed = !!trip?.revealed_at
+
+  async function apply(patch: JournalTripPatch, doneMessage: string) {
+    if (!trip || !password) return
+    setBusy(true)
+    setNotice(null)
+    const result = await updateJournalTrip(password, trip.id, patch)
+    setBusy(false)
+    if (!result.ok) {
+      setNotice(result.error)
+      return
+    }
+    await refreshTrip()
+    setNotice(doneMessage)
+  }
+
+  return (
+    <>
+      <div className="sec">💌 발송 · 공개 (관리자)</div>
+      <div className="box" style={{ padding: '4px 14px 14px' }}>
+        <div className="field" style={{ marginTop: 13 }}>
+          <label className="lab">비밀친구에게 발송 허용</label>
+          <div className="chips">
+            <button className={'chip' + (open ? ' on' : '')} disabled={busy}
+              onClick={() => !open && apply({ deliveryOpen: true }, '이제 참여자들이 발송할 수 있어요.')}>ON</button>
+            <button className={'chip' + (!open ? ' on' : '')} disabled={busy}
+              onClick={() => open && apply({ deliveryOpen: false }, '발송을 닫았어요.')}>OFF</button>
+          </div>
+        </div>
+        <p className="note">OFF인 동안 참여자가 발송을 누르면 "아직 발송기간이 아니에요"라고 떠요.</p>
+        <div className="field" style={{ marginTop: 13 }}>
+          <label className="lab">🎉 다 같이 공개 (나를 관찰한 친구 이름)</label>
+          <div className="chips">
+            <button className={'chip' + (revealed ? ' on' : '')} disabled={busy}
+              onClick={() => !revealed && apply({ revealed: true }, '공개했어요! 이제 모두 이름을 확인할 수 있어요.')}>ON</button>
+            <button className={'chip' + (!revealed ? ' on' : '')} disabled={busy}
+              onClick={() => revealed && apply({ revealed: false }, '공개를 닫았어요.')}>OFF</button>
+          </div>
+        </div>
+        <p className="note">
+          ON 하는 순간 받은 일지가 있는 사람 모두가 동시에 확인할 수 있어요. 발송을 다 받은 뒤에 켜주세요.
+        </p>
+        {notice && <p className="note" style={{ marginTop: 8, color: 'var(--coral-ink)' }}>{notice}</p>}
+      </div>
+    </>
+  )
+}
+
 export function SettingsTab() {
   const { trip, member, switchTrip } = useNote()
   const { authed } = useAdmin()
@@ -154,6 +213,7 @@ export function SettingsTab() {
         )}
       </div>
 
+      {authed && <DeliveryToggle />}
       {authed && <GuideStepsEditor />}
 
       <div className="sec">🔔 리마인더</div>

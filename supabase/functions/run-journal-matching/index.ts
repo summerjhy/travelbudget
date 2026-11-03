@@ -134,7 +134,9 @@ Deno.serve(async (req: Request) => {
   const matchedAt = new Date().toISOString()
   const { error: updateError } = await supabase
     .from('journal_trips')
-    .update({ matched_at: matchedAt })
+    // 새 매칭이면 발송/공개 스위치도 처음 상태(닫힘)로 되돌린다 — 재매칭 후에도
+    // 열려 있으면 새 짝으로 메모를 쓰기도 전에 공개돼버린다.
+    .update({ matched_at: matchedAt, delivery_open: false, revealed_at: null })
     .eq('id', trip.id)
   if (updateError) return jsonResponse({ error: updateError.message }, 500)
 
