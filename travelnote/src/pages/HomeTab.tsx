@@ -3,6 +3,7 @@ import { Bunny } from '../components/illustrations/Bunny'
 import { Star, Heart, Cloud } from '../components/illustrations/Decor'
 import { SecretTargetReveal } from '../components/SecretTargetReveal'
 import { useSecretTarget } from '../lib/useSecretTarget'
+import { guideStepsOf } from '../lib/guideSteps'
 
 /**
  * 홈: 매칭 전/후 상태를 안내한다.
@@ -62,9 +63,9 @@ export function HomeTab() {
 
       <div className="sec">📝 어떻게 쓰나요?</div>
       <ul className="box steps">
-        <li><span className="stepnum">1</span>비밀친구의 행동을 관찰해요</li>
-        <li><span className="stepnum">2</span>생각날 때마다 짧게 메모해요</li>
-        <li><span className="stepnum">3</span>마지막 날, 비밀친구에게 발송해요</li>
+        {guideStepsOf(trip.guide_steps).map((step, i) => (
+          <li key={i}><span className="stepnum">{i + 1}</span>{step}</li>
+        ))}
       </ul>
       <div style={{ height: 20 }} />
     </section>

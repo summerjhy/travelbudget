@@ -21,7 +21,7 @@ export function TripLayout() {
             )}
           </div>
         </div>
-        <p className="subtitle">🔍 비밀친구 관찰일지</p>
+        <p className="subtitle">🔍 비밀친구</p>
       </header>
 
       <Outlet />

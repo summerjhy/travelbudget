@@ -13,6 +13,7 @@ export interface AdminJournalTrip {
   end_date: string | null
   matched_at: string | null
   revealed_at: string | null
+  guide_steps?: string[] | null
   created_at: string
   member_count: number
 }
@@ -22,6 +23,7 @@ export interface JournalTripPatch {
   code?: string
   startDate?: string | null
   endDate?: string | null
+  guideSteps?: string[] | null
 }
 
 async function call<T>(

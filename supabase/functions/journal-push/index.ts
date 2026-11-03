@@ -104,7 +104,7 @@ Deno.serve(async (req: Request) => {
       .eq('member_id', member.id)
     if (!subs || subs.length === 0) return jsonResponse({ ok: true, sent: 0 }, 200)
 
-    const payload = JSON.stringify({ title: '🔍 비밀친구 관찰일지', body: '알림이 잘 도착했어요.' })
+    const payload = JSON.stringify({ title: '🔍 비밀친구', body: '알림이 잘 도착했어요.' })
     let sent = 0
     await Promise.allSettled(
       subs.map(async (s) => {

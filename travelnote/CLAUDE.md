@@ -66,6 +66,8 @@
 
 - [x] 17. 발송 텍스트 가독성 — 메모 여러 줄이 다닥다닥 붙어있어 어디까지가 한 건인지 헷갈린다는 피드백으로, 각 줄 앞에 `▪️` 불릿을 붙이고 줄 사이에 빈 줄을 넣어 시각적으로 구분되게 했다(`deliver-journal`의 텍스트 조합 부분만 수정).
 
+- [ ] 18. (여행 종료 후 용도 확장) 앱 이름 "비밀친구 관찰일지" → **"비밀친구"** (manifest name/short_name, `<title>`, 코드 입력 화면, 헤더 부제, 푸시 기본 제목, 발송 텍스트 머리말). 관리자 화면 문구도 "관찰일지" → "비밀친구 일지"(둘러보기/관리하기/새로 만들기/이름 라벨, `create-journal-trip` 에러 문구 포함). 발송 탭 "내가 받은 관찰일지"는 받은 내용물 이름이라 유지. 홈 "어떻게 쓰나요?" 단계를 코드별로 관리자가 최대 5개까지 직접 지정 — `journal_trips.guide_steps text[]`(마이그레이션 0019, null이면 `DEFAULT_GUIDE_STEPS` 3개), 저장은 `admin-journal`의 `patch.guideSteps`(비밀번호 확인 후 service_role). 편집기는 설정 탭에 있고 `AdminContext`에 비밀번호가 있을 때(관리자 → 둘러보기로 들어왔을 때)만 보인다. 설정 탭 최상단에 참여 중인 친구 목록(인원 수 + 이모지·이름, 본인 표시)을 추가 — `useTripMembers`, 매칭 정보는 포함하지 않는다. **`admin-journal`/`deliver-journal`/`journal-push`/`send-journal-reminders` 재배포가 아직 안 됨**(작업 세션의 Supabase MCP가 다른 계정이라 접근 불가). 0019는 사용자가 SQL Editor로 직접 적용 완료.
+
 **1~17단계 전부 완료.**
 
 ## 사용자 외부 작업 체크리스트

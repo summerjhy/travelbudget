@@ -33,7 +33,7 @@ export function AdminBrowse({
     <div className="wrap">
       <header className="head">
         <div className="headrow">
-          <h1 className="title">🧭 관찰일지 둘러보기</h1>
+          <h1 className="title">🧭 비밀친구 일지 둘러보기</h1>
         </div>
         <p className="subtitle">코드 없이 아무 여행이나 열 수 있어요</p>
       </header>
@@ -47,7 +47,7 @@ export function AdminBrowse({
         {confirming && (
           <div className="box" style={{ marginBottom: 12, padding: 14, borderColor: 'var(--coral)' }}>
             <p className="note" style={{ margin: '0 0 10px' }}>
-              <b>'{confirming.name}'</b> 관찰일지를 둘러보시겠어요?
+              <b>'{confirming.name}'</b> 비밀친구 일지를 둘러보시겠어요?
             </p>
             <div className="row2">
               <button className="btn quiet sm" style={{ flex: '0 0 34%' }} onClick={() => setConfirming(null)}>아니오</button>
@@ -56,7 +56,7 @@ export function AdminBrowse({
           </div>
         )}
 
-        {!loading && trips.length === 0 && <div className="empty">아직 만들어진 관찰일지가 없어요.</div>}
+        {!loading && trips.length === 0 && <div className="empty">아직 만들어진 비밀친구 일지가 없어요.</div>}
 
         {!loading && trips.map((t) => (
           <button

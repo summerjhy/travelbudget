@@ -125,21 +125,21 @@ export function AdminConsole({ onBack, onCreateTrip }: { onBack: () => void; onC
     <div className="wrap" style={{ paddingBottom: 44 }}>
       <header className="head">
         <div className="headrow">
-          <h1 className="title">🗂 관찰일지 관리하기</h1>
+          <h1 className="title">🗂 비밀친구 일지 관리하기</h1>
         </div>
         <p className="subtitle">{trips.length}개 · 목록 · 수정 · 삭제 · 제비뽑기</p>
       </header>
 
       <div className="pad">
         <div className="row2" style={{ marginBottom: 10 }}>
-          <button className="btn ghost" onClick={onCreateTrip}>+ 새 관찰일지</button>
+          <button className="btn ghost" onClick={onCreateTrip}>+ 새 비밀친구 일지</button>
           <button className="btn quiet" onClick={onBack}>돌아가기</button>
         </div>
 
         {notice && <p className="note" style={{ color: 'var(--coral-ink)', marginBottom: 9 }}>{notice}</p>}
         {error && <p className="err">{error}</p>}
 
-        {trips.length === 0 && <div className="empty">아직 만들어진 관찰일지가 없어요.</div>}
+        {trips.length === 0 && <div className="empty">아직 만들어진 비밀친구 일지가 없어요.</div>}
 
         {trips.map((t) => {
           if (t.id === editingId && draft) {

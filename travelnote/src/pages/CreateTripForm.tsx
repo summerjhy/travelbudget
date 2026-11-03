@@ -58,7 +58,7 @@ export function CreateTripForm({
     <div className="wrap">
       <header className="head">
         <div className="headrow">
-          <h1 className="title">➕ 새 관찰일지 만들기</h1>
+          <h1 className="title">➕ 새 비밀친구 일지 만들기</h1>
         </div>
       </header>
       <div className="pad">
@@ -66,7 +66,7 @@ export function CreateTripForm({
 
         <form onSubmit={handleSubmit}>
           <div className="field">
-            <label className="lab">관찰일지 이름</label>
+            <label className="lab">비밀친구 일지 이름</label>
             <input className="inp" value={name} onChange={(e) => setName(e.target.value)} placeholder="예: 상하이 여행" />
           </div>
           <div className="field">

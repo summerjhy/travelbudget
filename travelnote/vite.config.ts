@@ -13,9 +13,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: '비밀친구 관찰일지',
-        short_name: '관찰일지',
-        description: '여행 중 비밀친구를 관찰하고 메모를 남기는 마니또 일지',
+        name: '비밀친구',
+        short_name: '비밀친구',
+        description: '비밀친구(마니또)를 뽑고 몰래 관찰 메모를 남기는 앱',
         lang: 'ko',
         theme_color: '#F4A4A0',
         background_color: '#FDF6E3',

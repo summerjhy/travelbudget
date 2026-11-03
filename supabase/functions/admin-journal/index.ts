@@ -21,8 +21,13 @@ interface Body {
     code?: string
     startDate?: string | null
     endDate?: string | null
+    /** 홈 "어떻게 쓰나요?" 단계. 빈 배열/null이면 기본 안내로 되돌린다. */
+    guideSteps?: string[] | null
   }
 }
+
+const MAX_GUIDE_STEPS = 5
+const MAX_GUIDE_STEP_LENGTH = 60
 
 function jsonResponse(body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
@@ -58,7 +63,7 @@ Deno.serve(async (req: Request) => {
   if (body.action === 'list') {
     const { data: trips, error } = await supabase
       .from('journal_trips')
-      .select('id, code, name, start_date, end_date, matched_at, revealed_at, created_at')
+      .select('id, code, name, start_date, end_date, matched_at, revealed_at, guide_steps, created_at')
       .order('created_at', { ascending: false })
     if (error) return jsonResponse({ error: error.message }, 500)
 
@@ -89,6 +94,16 @@ Deno.serve(async (req: Request) => {
     }
     if (p.startDate !== undefined) patch.start_date = p.startDate
     if (p.endDate !== undefined) patch.end_date = p.endDate
+    if (p.guideSteps !== undefined) {
+      const steps = (p.guideSteps ?? []).map((s) => String(s).trim()).filter(Boolean)
+      if (steps.length > MAX_GUIDE_STEPS) {
+        return jsonResponse({ error: `안내는 최대 ${MAX_GUIDE_STEPS}개까지예요.` }, 400)
+      }
+      if (steps.some((s) => s.length > MAX_GUIDE_STEP_LENGTH)) {
+        return jsonResponse({ error: `안내 한 줄은 ${MAX_GUIDE_STEP_LENGTH}자 이하로 적어주세요.` }, 400)
+      }
+      patch.guide_steps = steps.length > 0 ? steps : null
+    }
     if (Object.keys(patch).length === 0) return jsonResponse({ error: '바뀐 내용이 없습니다.' }, 400)
 
     const { data, error } = await supabase

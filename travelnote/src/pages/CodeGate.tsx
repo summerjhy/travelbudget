@@ -31,7 +31,7 @@ export function CodeGate({ onAdmin }: { onAdmin: () => void }) {
     <div className="wrap">
       <header className="head">
         <div className="headrow">
-          <h1 className="title">🔍 비밀친구 관찰일지</h1>
+          <h1 className="title">🔍 비밀친구</h1>
         </div>
         <p className="subtitle">여행 코드를 입력하고 몰래 시작해요</p>
       </header>
@@ -56,7 +56,7 @@ export function CodeGate({ onAdmin }: { onAdmin: () => void }) {
         </form>
         {(error || contextError) && <p className="err">{error ?? contextError}</p>}
         <p className="note" style={{ marginTop: 16 }}>
-          관리자에게 받은 8자리 코드를 입력하면 그 여행 관찰일지로 들어가요.
+          관리자에게 받은 8자리 코드를 입력하면 그 비밀친구 일지로 들어가요.
           한 번 입력하면 다음부터는 자동으로 열려요.
         </p>
         <button

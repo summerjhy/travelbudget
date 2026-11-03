@@ -6,6 +6,8 @@ export interface JournalTrip {
   end_date: string | null
   matched_at: string | null
   revealed_at: string | null
+  /** 홈 "어떻게 쓰나요?" 단계(관리자 지정). null이면 DEFAULT_GUIDE_STEPS */
+  guide_steps?: string[] | null
   created_at: string
 }
 

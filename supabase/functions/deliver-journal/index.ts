@@ -123,7 +123,7 @@ Deno.serve(async (req: Request) => {
   // 건인지 눈으로 바로 구분되게 한다(여러 줄이라 헷갈린다는 피드백).
   // 한 줄에 붙이면 이모지가 많은 메모에서 줄이 삐뚤빼뚤 꺾여 보였다.
   const lines = notes.map((n) => `▪️ ${formatObservedAt(n.observed_at)}.\n${n.body}`)
-  const text = `🔍 비밀친구 관찰일지\n\n${lines.join('\n\n')}`
+  const text = `🔍 비밀친구\n\n${lines.join('\n\n')}`
 
   const { data: existingDelivery } = await admin
     .from('journal_deliveries')

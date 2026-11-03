@@ -86,7 +86,7 @@ Deno.serve(async (req: Request) => {
     .in('member_id', memberIds)
 
   const payload = JSON.stringify({
-    title: '🔍 비밀친구 관찰일지',
+    title: '🔍 비밀친구',
     body: '비밀친구 관찰 메모, 잊지 않으셨죠? 지금 한 줄 남겨보세요.',
   })
 

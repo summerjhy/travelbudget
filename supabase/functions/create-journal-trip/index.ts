@@ -55,7 +55,7 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: '코드는 숫자 8자리여야 합니다.' }, 400)
   }
   if (!body.name?.trim()) {
-    return jsonResponse({ error: '관찰일지 이름은 필수입니다.' }, 400)
+    return jsonResponse({ error: '비밀친구 일지 이름은 필수입니다.' }, 400)
   }
 
   const memberNames = (body.memberNames ?? []).map((n) => n.trim()).filter(Boolean)

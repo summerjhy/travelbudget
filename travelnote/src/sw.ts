@@ -26,7 +26,7 @@ registerRoute(
 
 // 리마인더 알림. send-journal-reminders / deliver-journal Edge Function 이 보낸 푸시를 받아 띄운다.
 self.addEventListener('push', (event) => {
-  let title = '🔍 비밀친구 관찰일지'
+  let title = '🔍 비밀친구'
   let body = '새 소식이 있어요.'
   try {
     const data = event.data?.json()
